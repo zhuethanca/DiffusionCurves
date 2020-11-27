@@ -12,6 +12,13 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include "graphics/Bezier.h"
+#include "graphics/ColorCurve.h"
+
+void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods);
+
+bool handles = true;
+bool sBezier = true;
+bool sColor = false;
 
 int main() {
     glfwInit();
@@ -45,7 +52,15 @@ int main() {
 
     glViewport(0, 0, screenWidth, screenHeight);
 
-    Bezier bezier;
+    std::cout<<R"(
+    H,h      Show/Hide Handles
+    B,b      Show/Hide Bezier Curve
+    C,c      Show/Hide Color Curves
+    E,e      Enter Color
+)";
+
+    Bezier bezier(3);
+    ColorCurve colorCurve(bezier);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -59,16 +74,48 @@ int main() {
         glMatrixMode( GL_MODELVIEW );
         glLoadIdentity();
 
-        bezier.renderHandles();
-        bezier.renderCurve();
+        if (sBezier) {
+            bezier.renderCurve();
+            if (handles)
+                bezier.renderHandles();
+        }
+        if (sColor) {
+            colorCurve.render();
+            if (handles)
+                colorCurve.renderHandles();
+        }
 
         glfwSwapBuffers(window);
 
         glfwPollEvents();
-        bezier.update(window);
+
+        glfwSetKeyCallback(window, handleEvents);
+
+        if (sBezier && handles)
+            bezier.update(window);
+        if (sColor && handles)
+            colorCurve.update(window);
     }
 
     glfwTerminate();
 
     return EXIT_SUCCESS;
+}
+
+void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_H && action == GLFW_PRESS) {
+        handles = !(handles);
+    }
+    if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+        sBezier = !(sBezier);
+        if (sBezier) {
+            sColor = false;
+        }
+    }
+    if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+        sColor = !(sColor);
+        if (sColor) {
+            sBezier = false;
+        }
+    }
 }

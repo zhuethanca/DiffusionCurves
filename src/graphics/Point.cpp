@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include "graphics/Point.h"
+#include <iostream>
 
 Point::Point() : Point(0, 0) {
 }
@@ -25,6 +26,23 @@ void Point::normalize() {
     }
 }
 
-double Point::norm() {
+double Point::norm() const {
     return sqrt(x*x + y*y);
+}
+
+double Point::sqdist(Point o) const {
+    return (x-o.x)*(x-o.x) + (y-o.y)*(y-o.y);
+}
+
+bool Point::operator==(const Point &rhs) const {
+    return x == rhs.x &&
+           y == rhs.y;
+}
+
+bool Point::operator!=(const Point &rhs) const {
+    return !(rhs == *this);
+}
+
+std::ostream& std::operator<<(std::ostream &strm, const Point &p) {
+    return strm << "(" << p.x << ", " << p.y << ")";
 }

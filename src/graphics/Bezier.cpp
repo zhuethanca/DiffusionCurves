@@ -5,6 +5,10 @@
 #include "graphics/Bezier.h"
 #include <iostream>
 #include <cmath>
+#include <graphics/OpenglUtil.h>
+#include "graphics/Curve.h"
+
+Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {}
 
 void Bezier::update(GLFWwindow *window) {
     int lstate = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -100,50 +104,42 @@ void Bezier::renderHandles() {
 }
 
 void Bezier::renderCurve() {
-    if (samples.size() < 4) return;
-    glBegin(GL_LINES);{
-        glColor3f(0, 0, 0);
-        for (int i = 1; i < samples.size(); i ++) {
-            Point &p1 = samples.at(i - 1);
-            Point &p2 = samples.at(i);
-            glVertex2f(p1.x, p1.y);
-            glVertex2f(p2.x, p2.y);
-        }
-    }glEnd();
+    this->curve.render();
 }
 
 void Bezier::updateBezier() {
     samples.clear();
     norms.clear();
+    segments.clear();
     if (handles.size() < 4)
         return;
+    segments.push_back(samples.size());
+
     samples.emplace_back(handles.at(0).x, handles.at(0).y);
-    norms.emplace_back(handles.at(1).y-handles.at(0).y, handles.at(0).x-handles.at(1).x);
-    (*norms.rbegin()).normalize();
+    norms.emplace_back(0, 0);
+
     for (int i = 0; i+3 < handles.size(); i += 3) {
+        Point& last = norms.at(norms.size()-1);
+        Point newn(handles.at(i+1).y-handles.at(i).y, handles.at(i).x-handles.at(i+1).x);
+        newn.normalize();
+        last.x += newn.x;
+        last.y += newn.y;
+        last.normalize();
+
         subdivideBezier(handles.at(i+0).x, handles.at(i+0).y,
                         handles.at(i+1).x, handles.at(i+1).y,
                         handles.at(i+2).x, handles.at(i+2).y,
                         handles.at(i+3).x, handles.at(i+3).y,
                         samples, norms);
+        segments.push_back(samples.size());
+
         samples.emplace_back(handles.at(i+3).x, handles.at(i+3).y);
         norms.emplace_back(handles.at(i+3).y-handles.at(i+2).y, handles.at(i+2).x-handles.at(i+3).x);
         (*norms.rbegin()).normalize();
     }
-}
 
-void Bezier::drawRect(double x, double y, double width, double height) {
-    glVertex2f(x, y);
-    glVertex2f( x+width, y);
-    glVertex2f( x+width, y+height);
-    glVertex2f(x, y+height);
-}
-
-void Bezier::drawCenteredRect(double x, double y, double width, double height) {
-    glVertex2f(x-width/2.0, y-height/2.0);
-    glVertex2f(x+width/2.0, y-height/2.0);
-    glVertex2f(x+width/2.0, y+height/2.0);
-    glVertex2f(x-width/2.0, y+height/2.0);
+    curve.offset(norms, offset_dist, pOffset);
+    curve.offset(norms, -offset_dist, nOffset);
 }
 
 /**

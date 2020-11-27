@@ -29,5 +29,5 @@ target_link_libraries(core igl::core igl::opengl igl::opengl_glfw )
 add_executable(diffusion_curves "main.cpp")
 target_link_libraries(diffusion_curves core igl::core igl::opengl igl::opengl_glfw)
 
-add_executable(opengl "opengl.cpp" opengl.h)
+add_executable(opengl "opengl.cpp")
 target_link_libraries(opengl core igl::core igl::opengl igl::opengl_glfw)
