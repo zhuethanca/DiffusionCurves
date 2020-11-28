@@ -3,6 +3,8 @@
 #include "graphics/Point.h"
 #include <utility>
 #include <map>
+#include <Eigen/Eigen>
+typedef Eigen::Triplet<double> Tripletd;
 
 class Curve {
 public:
@@ -14,6 +16,16 @@ public:
     Point at(double factor);
     size_t atIndex(double factor);
     double length() const;
+    void renderToArray(const std::vector<double> &data, size_t width, size_t height,
+                              size_t (*index)(size_t, size_t, size_t, size_t), Eigen::SparseMatrix<double> &target, size_t col,
+                              double (*dupHandler)(const std::vector<double>&), int max);
+    void renderToArray(const std::vector<double> &data, size_t width, size_t height,
+                       size_t (*index)(size_t, size_t, size_t, size_t), size_t col,
+                       std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max);
+    static void finalizeArrayRender(Eigen::SparseMatrix<double> &target, double (*dupHandler)(const std::vector<double>&),
+                             size_t width, size_t height,
+                                    std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max);
+
     template<class T>
     void interp(const std::map<double, T>& control, double (*extract) (T), std::vector<double>& res) {
         res.clear();
@@ -54,4 +66,7 @@ private:
     std::vector<Point>& samples;
     std::vector<int>& segments;
     double computeSegmentPos(double t);
+    void renderLine(Point &p1, Point &p2, double d1, double d2,
+                                  size_t width, size_t height, size_t (*index)(size_t x, size_t y, size_t width, size_t height),
+                    std::vector<Tripletd> &target, size_t col, std::map<int, std::vector<double>>& dups, int max);
 };

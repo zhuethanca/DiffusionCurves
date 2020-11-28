@@ -3,6 +3,7 @@
 #include "Bezier.h"
 #include <map>
 #include <cmath>
+#include <random>
 
 #define C_HANDLE_SIZE 10
 #define C_SELECTION_RADIUS 10
@@ -34,12 +35,20 @@ public:
     explicit ColorCurve(Bezier& bezier);
     void render();
     void renderHandles();
+    void renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height);
+    void renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height);
     void update(GLFWwindow *window);
 
 private:
+    Bezier& bezier;
+
     std::map<double, ARGBInt> pControl;
     std::map<double, ARGBInt> nControl;
 
+    std::uniform_real_distribution<double> unif;
+    std::default_random_engine re;
+
+    bool shift = false;
     bool epressed = false;
     bool pressed = false;
     bool rpressed = false;

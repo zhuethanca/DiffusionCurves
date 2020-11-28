@@ -11,14 +11,23 @@
 // Include GLFW
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <graphics/BitmapRender.h>
 #include "graphics/Bezier.h"
 #include "graphics/ColorCurve.h"
+#include "graphics/Util.h"
+#include <igl/min_quad_with_fixed.h>
+#include "fd_grad.h"
 
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 bool handles = true;
 bool sBezier = true;
 bool sColor = false;
+bool sBmap = true;
+
+Bezier bezier(3);
+ColorCurve colorCurve(bezier);
+BitmapRender bitmapRender;
 
 int main() {
     glfwInit();
@@ -57,10 +66,9 @@ int main() {
     B,b      Show/Hide Bezier Curve
     C,c      Show/Hide Color Curves
     E,e      Enter Color
+    R,r      Render
+    M,m      Show/Hide Bitmap
 )";
-
-    Bezier bezier(3);
-    ColorCurve colorCurve(bezier);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -73,6 +81,9 @@ int main() {
 
         glMatrixMode( GL_MODELVIEW );
         glLoadIdentity();
+
+        if (sBmap)
+            bitmapRender.render();
 
         if (sBezier) {
             bezier.renderCurve();
@@ -117,5 +128,45 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         if (sColor) {
             sBezier = false;
         }
+    }
+    if (key == GLFW_KEY_M && action == GLFW_PRESS) {
+        sBmap = !(sBmap);
+    }
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+        Eigen::SparseMatrix<double> rgb;
+        colorCurve.renderToMatrix(rgb, WIDTH, HEIGHT);
+        Eigen::SparseMatrix<double> norms;
+        colorCurve.renderNormToMatrix(norms, WIDTH, HEIGHT);
+
+        int nz = rgb.nonZeros();
+        Eigen::MatrixX3d rgbDense(nz/3, 3);
+        Eigen::VectorXi known(nz/3);
+        {
+            for (int k = 0; k < 3; k ++) {
+                int i = 0;
+                for (Eigen::SparseMatrix<double>::InnerIterator it(rgb, k); it; ++it) {
+                    if (k == 0)
+                        known(i) = it.row();
+                    rgbDense(i, k) = it.value();
+                    i++;
+                }
+            }
+        }
+
+        int nx = WIDTH;
+        int ny = HEIGHT;
+        Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
+        fd_grad(nx, ny, 2, G);
+
+        Eigen::SparseMatrix<double> A = G.transpose() * G;
+        Eigen::SparseMatrix<double> Aeq(0, A.rows());
+
+        Eigen::SparseMatrix<double> B = G.transpose() * norms;
+        Eigen::MatrixXd Beq = Eigen::MatrixXd::Zero(0, 0);
+
+        Eigen::MatrixXd finalImage;
+        igl::min_quad_with_fixed(A, B.toDense(), known, rgbDense, Aeq, Beq, false, finalImage);
+
+        bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
     }
 }

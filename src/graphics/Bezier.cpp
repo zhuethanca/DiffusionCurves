@@ -5,7 +5,7 @@
 #include "graphics/Bezier.h"
 #include <iostream>
 #include <cmath>
-#include <graphics/OpenglUtil.h>
+#include <graphics/Util.h>
 #include "graphics/Curve.h"
 
 Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {}

@@ -4,15 +4,22 @@
 
 #include "graphics/ColorCurve.h"
 #include <iostream>
-#include <graphics/OpenglUtil.h>
+#include <graphics/Util.h>
 #include <sstream>
 #include "graphics/Point.h"
 
-ColorCurve::ColorCurve(Bezier &bezier) : pCurve(bezier.pOffset, bezier.segments), nCurve(bezier.nOffset, bezier.segments) {
-
+ColorCurve::ColorCurve(Bezier &bezier) : bezier(bezier),
+    pCurve(bezier.pOffset, bezier.segments), nCurve(bezier.nOffset, bezier.segments), unif(0, 1) {
+    re.seed(time(nullptr));
 }
 
 void ColorCurve::update(GLFWwindow *window) {
+    int sftstate = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+    if (sftstate == GLFW_PRESS) {
+        shift = true;
+    } else if (sftstate == GLFW_RELEASE) {
+        shift = false;
+    }
     int lstate = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
     if (lstate == GLFW_PRESS) {
         double x, y;
@@ -123,25 +130,31 @@ void ColorCurve::onClick(double x, double y) {
     double d2 = nClosest.first.sqdist(newPoint);
 
     if (d1 < d2 && d1 < C_SELECTION_RADIUS*C_SELECTION_RADIUS) {
-        std::vector<double> r, g, b;
-        pCurve.interp(pControl, extractRed, r);
-        pCurve.interp(pControl, extractGreen, g);
-        pCurve.interp(pControl, extractBlue, b);
-
-        size_t index = pCurve.atIndex(pClosest.second);
-
-        pControl.emplace(pClosest.second, ARGBInt(1.0, r.at(index), g.at(index), b.at(index)));
+        if (!shift) {
+            std::vector<double> r, g, b;
+            pCurve.interp(pControl, extractRed, r);
+            pCurve.interp(pControl, extractGreen, g);
+            pCurve.interp(pControl, extractBlue, b);
+            size_t index = pCurve.atIndex(pClosest.second);
+            pControl.emplace(pClosest.second, ARGBInt(1.0, r.at(index), g.at(index), b.at(index)));
+        } else {
+            pControl.emplace(pClosest.second, ARGBInt(1.0, unif(re), unif(re), unif(re)));
+        }
         selected = pClosest.second;
         selectedP = true;
     } else if (d2 < C_SELECTION_RADIUS*C_SELECTION_RADIUS){
-        std::vector<double> r, g, b;
-        nCurve.interp(nControl, extractRed, r);
-        nCurve.interp(nControl, extractGreen, g);
-        nCurve.interp(nControl, extractBlue, b);
+        if (!shift) {
+            std::vector<double> r, g, b;
+            nCurve.interp(nControl, extractRed, r);
+            nCurve.interp(nControl, extractGreen, g);
+            nCurve.interp(nControl, extractBlue, b);
 
-        size_t index = nCurve.atIndex(nClosest.second);
+            size_t index = nCurve.atIndex(nClosest.second);
 
-        nControl.emplace(nClosest.second, ARGBInt(1.0, r.at(index), g.at(index), b.at(index)));
+            nControl.emplace(nClosest.second, ARGBInt(1.0, r.at(index), g.at(index), b.at(index)));
+        } else {
+            nControl.emplace(nClosest.second, ARGBInt(1.0, unif(re), unif(re), unif(re)));
+        }
         selected = nClosest.second;
         selectedP = false;
     } else {
@@ -224,6 +237,86 @@ void ColorCurve::selectColor() {
             nControl.at(selected).asInt = color;
         }
     }
+}
+
+double colordup(const std::vector<double> &dups) {
+    return dups.at(0);
+}
+
+void ColorCurve::renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height) {
+    data.resize(width * height, 3);
+    std::map<int, std::vector<double>> dups;
+    std::vector<Tripletd> matList;
+    {
+        std::vector<double> r, g, b;
+        pCurve.interp(pControl, extractRed, r);
+        pCurve.interp(pControl, extractGreen, g);
+        pCurve.interp(pControl, extractBlue, b);
+        pCurve.renderToArray(r, width, height, index, 0, dups, matList, width*height);
+        pCurve.renderToArray(g, width, height, index, 1, dups, matList, width*height);
+        pCurve.renderToArray(b, width, height, index, 2, dups, matList, width*height);
+    }
+    {
+        std::vector<double> r, g, b;
+        nCurve.interp(nControl, extractRed, r);
+        nCurve.interp(nControl, extractGreen, g);
+        nCurve.interp(nControl, extractBlue, b);
+        nCurve.render(r, g, b);
+        nCurve.renderToArray(r, width, height, index, 0, dups, matList, width*height);
+        nCurve.renderToArray(g, width, height, index, 1, dups, matList, width*height);
+        nCurve.renderToArray(b, width, height, index, 2, dups, matList, width*height);
+    }
+    Curve::finalizeArrayRender(data, colordup, width, height, dups, matList, width*height);
+}
+
+size_t indexDx(size_t x, size_t y, size_t width, size_t height) {
+    return y*width + x;
+}
+
+size_t indexDy(size_t x, size_t y, size_t width, size_t height) {
+    return (width*height) + (y*width + x);
+}
+
+double normdup(const std::vector<double> &dups) {
+    double sum = 0;
+    for (double d : dups)
+        sum += d;
+    return sum / dups.size();
+}
+
+void ColorCurve::renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height) {
+    data.resize(width * height*2, 3);
+    std::map<int, std::vector<double>> dups;
+    std::vector<Tripletd> matList;
+    Curve curve(bezier.samples, bezier.segments);
+    {
+        std::vector<double> pr, pg, pb, nr, ng, nb;
+        pCurve.interp(pControl, extractRed, pr);
+        pCurve.interp(pControl, extractGreen, pg);
+        pCurve.interp(pControl, extractBlue, pb);
+        nCurve.interp(nControl, extractRed, nr);
+        nCurve.interp(nControl, extractGreen, ng);
+        nCurve.interp(nControl, extractBlue, nb);
+
+        std::vector<double> rdx, rdy, gdx, gdy, bdx, bdy;
+        for (int i = 0; i < bezier.norms.size(); i ++) {
+            Point &norm = bezier.norms.at(i);
+            rdx.emplace_back(norm.x * (pr.at(i) - nr.at(i)));
+            gdx.emplace_back(norm.x * (pg.at(i) - ng.at(i)));
+            bdx.emplace_back(norm.x * (pb.at(i) - nb.at(i)));
+            rdy.emplace_back(norm.y * (pr.at(i) - nr.at(i)));
+            gdy.emplace_back(norm.y * (pg.at(i) - ng.at(i)));
+            bdy.emplace_back(norm.y * (pb.at(i) - nb.at(i)));
+        }
+
+        curve.renderToArray(rdx, width, height, indexDx, 0, dups, matList, width*height*2);
+        curve.renderToArray(gdx, width, height, indexDx, 1, dups, matList, width*height*2);
+        curve.renderToArray(bdx, width, height, indexDx, 2, dups, matList, width*height*2);
+        curve.renderToArray(rdy, width, height, indexDy, 0, dups, matList, width*height*2);
+        curve.renderToArray(gdy, width, height, indexDy, 1, dups, matList, width*height*2);
+        curve.renderToArray(bdy, width, height, indexDy, 2, dups, matList, width*height*2);
+    }
+    Curve::finalizeArrayRender(data, normdup, width, height, dups, matList, width*height*2);
 }
 
 ARGBInt::ARGBInt(int i) : asInt(i){
