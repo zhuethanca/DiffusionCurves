@@ -63,6 +63,9 @@ private:
     void onDrag(double x, double y);
 
     void selectColor();
+
+    void flood_fill(Point start, Eigen::MatrixXi &map, Point corner, std::map<int, std::vector<double>> &out,
+                    size_t width, size_t height);
 };
 
 double extractRed(ARGBInt argb);
@@ -70,3 +73,6 @@ double extractRed(ARGBInt argb);
 double extractGreen(ARGBInt argb);
 
 double extractBlue(ARGBInt argb);
+
+size_t indexDx(size_t x, size_t y, size_t width, size_t height);
+size_t indexDy(size_t x, size_t y, size_t width, size_t height);

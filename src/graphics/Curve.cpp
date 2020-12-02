@@ -1,5 +1,5 @@
 #include "graphics/Curve.h"
-#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 #include <cmath>
 
 Curve::Curve(std::vector<Point> &samples, std::vector<int>& segments) : samples(samples), segments(segments){
@@ -155,35 +155,46 @@ void Curve::renderToArray(const std::vector<double> &data, size_t width, size_t 
                    double (*dupHandler)(const std::vector<double>&), int max) {
     std::map<int, std::vector<double>> dups;
     std::vector<Tripletd> matList;
-    renderToArray(data, width, height, index, col, dups, matList, max);
+    std::set<int> intersections;
+    renderToArray(data, width, height, index, col, dups, matList, max, intersections);
     finalizeArrayRender(target, dupHandler, width, height, dups, matList, max);
 }
 
 void Curve::renderToArray(const std::vector<double> &data, size_t width, size_t height,
                    size_t (*index)(size_t, size_t, size_t, size_t), size_t col,
-                   std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max) {
-
+                   std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max,
+                   std::set<int> &intersections) {
     for (int i = 1; i < samples.size(); i ++) {
         Point& p1 = samples.at(i-1);
         Point& p2 = samples.at(i);
         double d1 = data.at(i-1);
         double d2 = data.at(i);
-        renderLine(p1, p2, d1, d2, width, height, index, matList, col, dups, max);
+        if (renderLine(p1, p2, d1, d2, width, height, index, matList, col, dups, max))
+            intersections.insert(i);
     }
 }
-
+int count = 0;
 void Curve::finalizeArrayRender(Eigen::SparseMatrix<double> &target, double (*dupHandler)(const std::vector<double>&),
                                 size_t width, size_t height,
                                 std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max) {
     target.setFromTriplets(matList.begin(), matList.end());
 
     for (const auto& pair : dups) {
-        if (pair.second.size() > 1)
+        if (pair.second.size() > 1) {
             target.coeffRef(pair.first % (max), pair.first / (max)) = dupHandler(pair.second);
+        }
     }
+
+    target.prune([](const int& row, const int& col, const double & value){
+        return 0 <= value && value <= 1;
+    });
 }
 
-void Curve::renderLine(Point &p1, Point &p2, double d1, double d2,
+/**
+ * Bresenham's line algorithm
+ * Psudocode Source: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+ */
+bool Curve::renderLine(Point &p1, Point &p2, double d1, double d2,
                        size_t width, size_t height, size_t (*index)(size_t x, size_t y, size_t width, size_t height),
                        std::vector<Tripletd> &target, size_t col, std::map<int, std::vector<double>>& dups, int max) {
     int x1 = (int) p1.x, x2 = (int) p2.x, y1 = (int) p1.y, y2 = (int) p2.y;
@@ -194,6 +205,7 @@ void Curve::renderLine(Point &p1, Point &p2, double d1, double d2,
     int err = dx + dy;
 
     double length = p1.dist(p2);
+    bool intersect = false;
 
     while (true) {
         Point p(x1, y1);
@@ -201,11 +213,15 @@ void Curve::renderLine(Point &p1, Point &p2, double d1, double d2,
         double d = d2 * t + (1 - t) * d1;
         uint32_t idx = index(p.x, p.y, width, height);
         target.emplace_back(idx, col, d);
+
         uint32_t dupidx = (col*max) + idx;
 
         if (dups.find(dupidx) == dups.end())
             dups.emplace(dupidx, std::vector<double>{});
+        else if (x1 != (int) p1.x && x1 != (int) p2.x && y1 != (int) p1.y && y1 != (int) p2.y)
+            intersect = true;
         dups.at(dupidx).emplace_back(d);
+
         if (x1 == x2 && y1 == y2) break;
         int e2 = 2*err;
         if (e2 >= dy) {
@@ -217,4 +233,5 @@ void Curve::renderLine(Point &p1, Point &p2, double d1, double d2,
             y1 += sy;
         }
     }
+    return intersect;
 }

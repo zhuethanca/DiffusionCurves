@@ -6,8 +6,8 @@
 // Include standard headers
 #include <cstdio>
 #include <cstdlib>
-// Include GLEW. Always include it before gl.h and glfw3.h, since it's a bit magic.
-#include <GL/glew.h>
+//// Include GLEW. Always include it before gl.h and glfw3.h, since it's a bit magic.
+//#include <GL/glew.h>
 // Include GLFW
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -28,6 +28,8 @@ bool sBmap = true;
 Bezier bezier(3);
 ColorCurve colorCurve(bezier);
 BitmapRender bitmapRender;
+Eigen::MatrixXd finalImage;
+bool rendered = false;
 
 int main() {
     glfwInit();
@@ -50,14 +52,14 @@ int main() {
 
     glfwMakeContextCurrent(window);
 
-    glewExperimental = GL_TRUE;
-
-    if (GLEW_OK != glewInit())
-    {
-        std::cout << "Failed to initialise GLEW" << std::endl;
-
-        return EXIT_FAILURE;
-    }
+//    glewExperimental = GL_TRUE;
+//
+//    if (GLEW_OK != glewInit())
+//    {
+//        std::cout << "Failed to initialise GLEW" << std::endl;
+//
+//        return EXIT_FAILURE;
+//    }
 
     glViewport(0, 0, screenWidth, screenHeight);
 
@@ -69,6 +71,10 @@ int main() {
     R,r      Render
     M,m      Show/Hide Bitmap
 )";
+    int nx = WIDTH;
+    int ny = HEIGHT;
+    Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
+    fd_grad(nx, ny, 2, G);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -94,6 +100,29 @@ int main() {
             colorCurve.render();
             if (handles)
                 colorCurve.renderHandles();
+        }
+
+        if (0&&!bezier.samples.empty()){
+            Eigen::SparseMatrix<double> norms;
+            colorCurve.renderNormToMatrix(norms, WIDTH, HEIGHT);
+            glBegin(GL_LINES);
+            for (int i = 0; i < bezier.samples.size(); i ++) {
+                Point &p = bezier.samples.at(i);
+                glColor3f(1.0, 1.0, 0);
+                glVertex2d(p.x, p.y);
+                double dx = norms.coeff(indexDx(p.x, p.y, WIDTH, HEIGHT), 0);
+                double dy = norms.coeff(indexDy(p.x, p.y, WIDTH, HEIGHT), 0);
+                glVertex2d(p.x + 20*dx, p.y + 20*dy);
+                if (rendered) {
+                    Eigen::MatrixXd B = G * finalImage;
+                    glColor3f(0.0, 1.0, 0);
+                    glVertex2d(p.x, p.y);
+                    dx = B(indexDx(p.x, p.y, WIDTH, HEIGHT), 0);
+                    dy = B(indexDy(p.x, p.y, WIDTH, HEIGHT), 0);
+                    glVertex2d(p.x + 20 * dx, p.y + 20 * dy);
+                }
+            }
+            glEnd();
         }
 
         glfwSwapBuffers(window);
@@ -133,30 +162,36 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         sBmap = !(sBmap);
     }
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+        std::cout << "Processing..." << std::endl;
         Eigen::SparseMatrix<double> rgb;
         colorCurve.renderToMatrix(rgb, WIDTH, HEIGHT);
         Eigen::SparseMatrix<double> norms;
         colorCurve.renderNormToMatrix(norms, WIDTH, HEIGHT);
+        std::cout << "Solving..." << std::endl;
 
-        int nz = rgb.nonZeros();
-        Eigen::MatrixX3d rgbDense(nz/3, 3);
-        Eigen::VectorXi known(nz/3);
+        std::set<int> known_set;
+        for (int k = 0; k < 3; k++) {
+            for (Eigen::SparseMatrix<double>::InnerIterator it(rgb, k); it; ++it) {
+                known_set.emplace(it.row());
+            }
+        }
+        Eigen::MatrixX3d rgbDense(known_set.size(), 3);
+        Eigen::VectorXi known(known_set.size());
         {
-            for (int k = 0; k < 3; k ++) {
-                int i = 0;
-                for (Eigen::SparseMatrix<double>::InnerIterator it(rgb, k); it; ++it) {
-                    if (k == 0)
-                        known(i) = it.row();
-                    rgbDense(i, k) = it.value();
-                    i++;
-                }
+            int i = 0;
+            for (auto k : known_set) {
+                known(i) = k;
+                rgbDense(i, 0) = rgb.coeff(k, 0);
+                rgbDense(i, 1) = rgb.coeff(k, 1);
+                rgbDense(i, 2) = rgb.coeff(k, 2);
+                i++;
             }
         }
 
         int nx = WIDTH;
         int ny = HEIGHT;
         Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
-        fd_grad(nx, ny, 2, G);
+        fd_grad(nx, ny, 0.5, G);
 
         Eigen::SparseMatrix<double> A = G.transpose() * G;
         Eigen::SparseMatrix<double> Aeq(0, A.rows());
@@ -164,9 +199,9 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         Eigen::SparseMatrix<double> B = G.transpose() * norms;
         Eigen::MatrixXd Beq = Eigen::MatrixXd::Zero(0, 0);
 
-        Eigen::MatrixXd finalImage;
         igl::min_quad_with_fixed(A, B.toDense(), known, rgbDense, Aeq, Beq, false, finalImage);
 
         bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
+        rendered = true;
     }
 }

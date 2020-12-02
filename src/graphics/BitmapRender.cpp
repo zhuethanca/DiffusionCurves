@@ -7,21 +7,14 @@
 #include <iostream>
 
 void BitmapRender::render() {
-    if (this->data != nullptr)
-        glDrawPixels(this->width, this->height, GL_RGB, GL_UNSIGNED_BYTE, data);
+    if (!this->data.empty())
+        glDrawPixels(this->width, this->height, GL_RGB, GL_UNSIGNED_BYTE, data.data());
 }
 
 void BitmapRender::setData(Eigen::SparseMatrix<double> &data, size_t width, size_t height,
              size_t (*index)(size_t, size_t, size_t, size_t)) {
-    if (this->data != nullptr) {
-        if (this->width * this->height != width * height) {
-            delete[] this->data;
-            this->data = new ubyte[width * height * 3];
-        }
-    } else {
-        this->data = new ubyte[width * height * 3];
-    }
-    memset(this->data, 0xFF, sizeof(ubyte) * width * height * 3);
+    this->data.clear();
+    this->data.resize(width*height*3, 0xFF);
     this->width = width;
     this->height = height;
     for (int k = 0; k < data.outerSize(); ++k) {
@@ -36,14 +29,8 @@ void BitmapRender::setData(Eigen::SparseMatrix<double> &data, size_t width, size
 
 void BitmapRender::setData(Eigen::MatrixXd &data, size_t width, size_t height,
                            size_t (*index)(size_t, size_t, size_t, size_t)) {
-    if (this->data != nullptr) {
-        if (this->width * this->height != width * height) {
-            delete[] this->data;
-            this->data = new ubyte[width * height * 3];
-        }
-    } else {
-        this->data = new ubyte[width * height * 3];
-    }
+    this->data.clear();
+    this->data.resize(width*height*3, 0xFF);
     this->width = width;
     this->height = height;
     for (uint32_t x = 0; x < width; x ++) {
@@ -53,9 +40,4 @@ void BitmapRender::setData(Eigen::MatrixXd &data, size_t width, size_t height,
             this->data[((height-y-1)*width+x)*3 + 2] = ((ubyte) (data(index(x, y, width, height), 2)*255)) & 0xFF;
         }
     }
-}
-
-BitmapRender::~BitmapRender() {
-    if (this->data != nullptr)
-        delete[] this->data;
 }

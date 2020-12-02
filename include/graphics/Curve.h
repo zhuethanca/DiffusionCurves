@@ -3,6 +3,7 @@
 #include "graphics/Point.h"
 #include <utility>
 #include <map>
+#include <set>
 #include <Eigen/Eigen>
 typedef Eigen::Triplet<double> Tripletd;
 
@@ -20,8 +21,9 @@ public:
                               size_t (*index)(size_t, size_t, size_t, size_t), Eigen::SparseMatrix<double> &target, size_t col,
                               double (*dupHandler)(const std::vector<double>&), int max);
     void renderToArray(const std::vector<double> &data, size_t width, size_t height,
-                       size_t (*index)(size_t, size_t, size_t, size_t), size_t col,
-                       std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max);
+                              size_t (*index)(size_t, size_t, size_t, size_t), size_t col,
+                              std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max,
+                              std::set<int> &intersections);
     static void finalizeArrayRender(Eigen::SparseMatrix<double> &target, double (*dupHandler)(const std::vector<double>&),
                              size_t width, size_t height,
                                     std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max);
@@ -62,11 +64,13 @@ public:
             res.push_back(lastVal);
         }
     }
+
+    static bool renderLine(Point &p1, Point &p2, double d1, double d2,
+                                  size_t width, size_t height, size_t (*index)(size_t x, size_t y, size_t width, size_t height),
+                    std::vector<Tripletd> &target, size_t col, std::map<int, std::vector<double>>& dups, int max);
+
 private:
     std::vector<Point>& samples;
     std::vector<int>& segments;
     double computeSegmentPos(double t);
-    void renderLine(Point &p1, Point &p2, double d1, double d2,
-                                  size_t width, size_t height, size_t (*index)(size_t x, size_t y, size_t width, size_t height),
-                    std::vector<Tripletd> &target, size_t col, std::map<int, std::vector<double>>& dups, int max);
 };

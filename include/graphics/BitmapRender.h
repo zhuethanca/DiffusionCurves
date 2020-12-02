@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Eigen>
 #include "ColorCurve.h"
+#include <memory>
 
 class BitmapRender {
 public:
@@ -9,9 +10,8 @@ public:
     void setData(Eigen::MatrixXd &data, size_t width, size_t height,
     size_t (*index)(size_t, size_t, size_t, size_t));
     void render();
-    ~BitmapRender();
 private:
-    ubyte* data = nullptr;
+    std::vector<ubyte> data;
     size_t width;
     size_t height;
 };

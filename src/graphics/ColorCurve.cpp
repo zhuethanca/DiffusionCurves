@@ -5,11 +5,12 @@
 #include "graphics/ColorCurve.h"
 #include <iostream>
 #include <graphics/Util.h>
-#include <sstream>
-#include "graphics/Point.h"
+#include <queue>
+#include <sys/param.h>
 
 ColorCurve::ColorCurve(Bezier &bezier) : bezier(bezier),
-    pCurve(bezier.pOffset, bezier.segments), nCurve(bezier.nOffset, bezier.segments), unif(0, 1) {
+                                         pCurve(bezier.pOffset, bezier.segments),
+                                         nCurve(bezier.nOffset, bezier.segments), unif(0, 1) {
     re.seed(time(nullptr));
 }
 
@@ -75,7 +76,8 @@ void ColorCurve::render() {
 }
 
 void ColorCurve::renderHandles() {
-    glBegin(GL_QUADS);{
+    glBegin(GL_QUADS);
+    {
         for (auto &ctrl : pControl) {
             Point p = pCurve.at(ctrl.first);
             if (selectedP && selected == ctrl.first) {
@@ -84,9 +86,9 @@ void ColorCurve::renderHandles() {
                 glColor3f(0, 0, 0);
             }
             drawCenteredRect(p.x, p.y, C_HANDLE_SIZE, C_HANDLE_SIZE);
-            glColor4f(ctrl.second.asARGB.r/255.0, ctrl.second.asARGB.g/255.0,
-                      ctrl.second.asARGB.b/255.0, ctrl.second.asARGB.a/255.0);
-            drawCenteredRect(p.x, p.y, C_HANDLE_SIZE-C_BORDER_THK, C_HANDLE_SIZE-C_BORDER_THK);
+            glColor4f(ctrl.second.asARGB.r / 255.0, ctrl.second.asARGB.g / 255.0,
+                      ctrl.second.asARGB.b / 255.0, ctrl.second.asARGB.a / 255.0);
+            drawCenteredRect(p.x, p.y, C_HANDLE_SIZE - C_BORDER_THK, C_HANDLE_SIZE - C_BORDER_THK);
         }
         for (auto &ctrl : nControl) {
             Point p = nCurve.at(ctrl.first);
@@ -96,11 +98,12 @@ void ColorCurve::renderHandles() {
                 glColor3f(0, 0, 0);
             }
             drawCenteredRect(p.x, p.y, C_HANDLE_SIZE, C_HANDLE_SIZE);
-            glColor4f(ctrl.second.asARGB.r/255.0, ctrl.second.asARGB.g/255.0,
-                      ctrl.second.asARGB.b/255.0, ctrl.second.asARGB.a/255.0);
-            drawCenteredRect(p.x, p.y, C_HANDLE_SIZE-C_BORDER_THK, C_HANDLE_SIZE-C_BORDER_THK);
+            glColor4f(ctrl.second.asARGB.r / 255.0, ctrl.second.asARGB.g / 255.0,
+                      ctrl.second.asARGB.b / 255.0, ctrl.second.asARGB.a / 255.0);
+            drawCenteredRect(p.x, p.y, C_HANDLE_SIZE - C_BORDER_THK, C_HANDLE_SIZE - C_BORDER_THK);
         }
-    }glEnd();
+    }
+    glEnd();
 }
 
 void ColorCurve::onClick(double x, double y) {
@@ -108,7 +111,7 @@ void ColorCurve::onClick(double x, double y) {
 
     for (auto &ctrl : pControl) {
         Point ctrlPoint = pCurve.at(ctrl.first);
-        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS*C_SELECTION_RADIUS) {
+        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS * C_SELECTION_RADIUS) {
             selected = ctrl.first;
             selectedP = true;
             return;
@@ -117,7 +120,7 @@ void ColorCurve::onClick(double x, double y) {
 
     for (auto &ctrl : nControl) {
         Point ctrlPoint = nCurve.at(ctrl.first);
-        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS*C_SELECTION_RADIUS) {
+        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS * C_SELECTION_RADIUS) {
             selected = ctrl.first;
             selectedP = false;
             return;
@@ -129,7 +132,7 @@ void ColorCurve::onClick(double x, double y) {
     double d1 = pClosest.first.sqdist(newPoint);
     double d2 = nClosest.first.sqdist(newPoint);
 
-    if (d1 < d2 && d1 < C_SELECTION_RADIUS*C_SELECTION_RADIUS) {
+    if (d1 < d2 && d1 < C_SELECTION_RADIUS * C_SELECTION_RADIUS) {
         if (!shift) {
             std::vector<double> r, g, b;
             pCurve.interp(pControl, extractRed, r);
@@ -142,7 +145,7 @@ void ColorCurve::onClick(double x, double y) {
         }
         selected = pClosest.second;
         selectedP = true;
-    } else if (d2 < C_SELECTION_RADIUS*C_SELECTION_RADIUS){
+    } else if (d2 < C_SELECTION_RADIUS * C_SELECTION_RADIUS) {
         if (!shift) {
             std::vector<double> r, g, b;
             nCurve.interp(nControl, extractRed, r);
@@ -167,7 +170,7 @@ void ColorCurve::onRightClick(double x, double y) {
 
     for (auto &ctrl : pControl) {
         Point ctrlPoint = pCurve.at(ctrl.first);
-        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS*C_SELECTION_RADIUS) {
+        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS * C_SELECTION_RADIUS) {
             pControl.erase(ctrl.first);
             return;
         }
@@ -175,7 +178,7 @@ void ColorCurve::onRightClick(double x, double y) {
 
     for (auto &ctrl : nControl) {
         Point ctrlPoint = nCurve.at(ctrl.first);
-        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS*C_SELECTION_RADIUS) {
+        if (ctrlPoint.sqdist(newPoint) < C_SELECTION_RADIUS * C_SELECTION_RADIUS) {
             nControl.erase(ctrl.first);
             return;
         }
@@ -240,21 +243,49 @@ void ColorCurve::selectColor() {
 }
 
 double colordup(const std::vector<double> &dups) {
-    return dups.at(0);
+    return -1;
+}
+
+/**
+ * Bresenham's line algorithm
+ * Psudocode Source: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+ */
+void drawLine(Eigen::MatrixXi &surface, Point &corner, Point &p1, Point &p2, int val) {
+    int x0 = (int) (p1.x-corner.x), x1 = (int) (p2.x-corner.x), y0 = (int) (p1.y-corner.y), y1 = (int) (p2.y-corner.y);
+
+    int dx = abs(x1-x0);
+    int sx = x0<x1 ? 1 : -1;
+    int dy = -abs(y1-y0);
+    int sy = y0<y1 ? 1 : -1;
+    int err = dx+dy;
+    while (true) {
+        surface(x0, y0) = val;
+        if (x0 == x1 && y0 == y1) break;
+        int e2 = 2*err;
+        if (e2 >= dy) {
+            err += dy;
+            x0 += sx;
+        }
+        if (e2 <= dx) {
+            err += dx;
+            y0 += sy;
+        }
+    }
 }
 
 void ColorCurve::renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height) {
     data.resize(width * height, 3);
     std::map<int, std::vector<double>> dups;
     std::vector<Tripletd> matList;
+    std::set<int> intersections;
     {
         std::vector<double> r, g, b;
         pCurve.interp(pControl, extractRed, r);
         pCurve.interp(pControl, extractGreen, g);
         pCurve.interp(pControl, extractBlue, b);
-        pCurve.renderToArray(r, width, height, index, 0, dups, matList, width*height);
-        pCurve.renderToArray(g, width, height, index, 1, dups, matList, width*height);
-        pCurve.renderToArray(b, width, height, index, 2, dups, matList, width*height);
+        pCurve.renderToArray(r, width, height, index, 0, dups, matList, width * height, intersections);
+        pCurve.renderToArray(g, width, height, index, 1, dups, matList, width * height, intersections);
+        pCurve.renderToArray(b, width, height, index, 2, dups, matList, width * height, intersections);
     }
     {
         std::vector<double> r, g, b;
@@ -262,19 +293,49 @@ void ColorCurve::renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width,
         nCurve.interp(nControl, extractGreen, g);
         nCurve.interp(nControl, extractBlue, b);
         nCurve.render(r, g, b);
-        nCurve.renderToArray(r, width, height, index, 0, dups, matList, width*height);
-        nCurve.renderToArray(g, width, height, index, 1, dups, matList, width*height);
-        nCurve.renderToArray(b, width, height, index, 2, dups, matList, width*height);
+        nCurve.renderToArray(r, width, height, index, 0, dups, matList, width * height, intersections);
+        nCurve.renderToArray(g, width, height, index, 1, dups, matList, width * height, intersections);
+        nCurve.renderToArray(b, width, height, index, 2, dups, matList, width * height, intersections);
     }
-    Curve::finalizeArrayRender(data, colordup, width, height, dups, matList, width*height);
+    dups.clear();
+
+    for (int i = 1; i < bezier.samples.size(); i ++) {
+        Point &p1 = bezier.pOffset.at(i - 1);
+        Point &p2 = bezier.pOffset.at(i);
+        Point &p3 = bezier.nOffset.at(i - 1);
+        Point &p4 = bezier.nOffset.at(i);
+
+        Point corner(
+                (int) MIN(MIN(MIN(p1.x, p2.x), p3.x), p4.x),
+                (int) MIN(MIN(MIN(p1.y, p2.y), p3.y), p4.y)
+                );
+        Point other_corner(
+                (int) MAX(MAX(MAX(p1.x, p2.x), p3.x), p4.x),
+                (int) MAX(MAX(MAX(p1.y, p2.y), p3.y), p4.y)
+        );
+        Eigen::MatrixXi flood_map = Eigen::MatrixXi::Zero(ceil(other_corner.x - corner.x)+1, ceil(other_corner.y - corner.y)+1);
+        drawLine(flood_map, corner, p1, p3, 2);
+        drawLine(flood_map, corner, p2, p4, 2);
+        drawLine(flood_map, corner, p1, p2, 1);
+        drawLine(flood_map, corner, p3, p4, 1);
+
+        Point start((int) ((p1.x + p2.x + p3.x + p4.x) / 4), (int) ((p1.y + p2.y + p3.y + p4.y) / 4));
+        flood_fill(start, flood_map, corner, dups, width, height);
+    }
+    Curve::finalizeArrayRender(data, colordup, width, height, dups, matList, width * height);
+    for (int i = 0; i < bezier.samples.size(); i ++) {
+        Point &p1 = bezier.pOffset.at(i);
+        data.coeffRef(index((int) p1.x, (int) p1.y, width, height), 2) = 1.0;
+    }
+
 }
 
 size_t indexDx(size_t x, size_t y, size_t width, size_t height) {
-    return y*width + x;
+    return y * width + x;
 }
 
 size_t indexDy(size_t x, size_t y, size_t width, size_t height) {
-    return (width*height) + (y*width + x);
+    return (width * height) + (y * width + x);
 }
 
 double normdup(const std::vector<double> &dups) {
@@ -285,10 +346,11 @@ double normdup(const std::vector<double> &dups) {
 }
 
 void ColorCurve::renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height) {
-    data.resize(width * height*2, 3);
+    data.resize(width * height * 2, 3);
     std::map<int, std::vector<double>> dups;
     std::vector<Tripletd> matList;
     Curve curve(bezier.samples, bezier.segments);
+    std::set<int> intersections;
     {
         std::vector<double> pr, pg, pb, nr, ng, nb;
         pCurve.interp(pControl, extractRed, pr);
@@ -299,7 +361,7 @@ void ColorCurve::renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t wi
         nCurve.interp(nControl, extractBlue, nb);
 
         std::vector<double> rdx, rdy, gdx, gdy, bdx, bdy;
-        for (int i = 0; i < bezier.norms.size(); i ++) {
+        for (int i = 0; i < bezier.norms.size(); i++) {
             Point &norm = bezier.norms.at(i);
             rdx.emplace_back(norm.x * (pr.at(i) - nr.at(i)));
             gdx.emplace_back(norm.x * (pg.at(i) - ng.at(i)));
@@ -309,35 +371,75 @@ void ColorCurve::renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t wi
             bdy.emplace_back(norm.y * (pb.at(i) - nb.at(i)));
         }
 
-        curve.renderToArray(rdx, width, height, indexDx, 0, dups, matList, width*height*2);
-        curve.renderToArray(gdx, width, height, indexDx, 1, dups, matList, width*height*2);
-        curve.renderToArray(bdx, width, height, indexDx, 2, dups, matList, width*height*2);
-        curve.renderToArray(rdy, width, height, indexDy, 0, dups, matList, width*height*2);
-        curve.renderToArray(gdy, width, height, indexDy, 1, dups, matList, width*height*2);
-        curve.renderToArray(bdy, width, height, indexDy, 2, dups, matList, width*height*2);
+        curve.renderToArray(rdx, width, height, indexDx, 0, dups, matList, width * height * 2, intersections);
+        curve.renderToArray(gdx, width, height, indexDx, 1, dups, matList, width * height * 2, intersections);
+        curve.renderToArray(bdx, width, height, indexDx, 2, dups, matList, width * height * 2, intersections);
+        curve.renderToArray(rdy, width, height, indexDy, 0, dups, matList, width * height * 2, intersections);
+        curve.renderToArray(gdy, width, height, indexDy, 1, dups, matList, width * height * 2, intersections);
+        curve.renderToArray(bdy, width, height, indexDy, 2, dups, matList, width * height * 2, intersections);
     }
-    Curve::finalizeArrayRender(data, normdup, width, height, dups, matList, width*height*2);
+    Curve::finalizeArrayRender(data, normdup, width, height, dups, matList, width * height * 2);
 }
 
-ARGBInt::ARGBInt(int i) : asInt(i){
+void ColorCurve::flood_fill(Point start, Eigen::MatrixXi &map, Point corner, std::map<int, std::vector<double>> &out,
+                            size_t width, size_t height) {
+    if (map.coeff((int)(start.x-corner.x), (int)(start.y-corner.y)) == 1)
+        return;
+    map.coeffRef((int)(start.x-corner.x), (int)(start.y-corner.y)) = 1;
+    int start_index = index(start.x, start.y, width, height);
+    for (int c = 0; c < 3; c ++) {
+        if (out.find((c*width*height) + start_index) == out.end())
+            out.emplace((c*width*height) + start_index, std::vector<double>{});
+        out.at((c*width*height) + start_index).emplace_back(0);
+        out.at((c*width*height) + start_index).emplace_back(0);
+    }
+    std::queue<Point> Q;
+    Q.emplace(start.x-corner.x, start.y-corner.y);
+    while (!Q.empty()) {
+        Point n = Q.front();
+        Q.pop();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++)
+                if (abs(dx) + abs(dy) == 1) {
+                    if (n.x + dx >= 0 && n.y + dy >= 0 && n.x + dx < map.rows() && n.y + dy < map.cols()) {
+                        int idx = index(n.x + dx + corner.x, n.y + dy + corner.y, width, height);
+                        if (map.coeff((int) (n.x + dx), (int) (n.y + dy)) != 1) {
+                            bool cont = map.coeff((int) (n.x + dx), (int) (n.y + dy)) == 0;
+                            map.coeffRef((int) (n.x + dx), (int) (n.y + dy)) = 1;
+                            for (int c = 0; c < 3; c++) {
+                                if (out.find((c * width * height) + idx) == out.end())
+                                    out.emplace((c * width * height) + idx, std::vector<double>{});
+                                out.at((c * width * height) + idx).emplace_back(0);
+                                out.at((c * width * height) + idx).emplace_back(0);
+                            }
+                            if (cont)
+                                Q.emplace(n.x + dx, n.y + dy);
+                        }
+                    }
+                }
+        }
+    }
 }
 
-ARGBInt::ARGBInt(ubyte a, ubyte r, ubyte g, ubyte b) : asARGB({b, g, r, a}){
+ARGBInt::ARGBInt(int i) : asInt(i) {
+}
+
+ARGBInt::ARGBInt(ubyte a, ubyte r, ubyte g, ubyte b) : asARGB({b, g, r, a}) {
 }
 
 ARGBInt::ARGBInt(double a, double r, double g, double b) :
-    asARGB({static_cast<ubyte>(((int)(b*255))&0xFF), static_cast<ubyte>(((int)(g*255))&0xFF),
-            static_cast<ubyte>(((int)(r*255))&0xFF), static_cast<ubyte>(((int)(a*255))&0xFF)}){
+        asARGB({static_cast<ubyte>(((int) (b * 255)) & 0xFF), static_cast<ubyte>(((int) (g * 255)) & 0xFF),
+                static_cast<ubyte>(((int) (r * 255)) & 0xFF), static_cast<ubyte>(((int) (a * 255)) & 0xFF)}) {
 }
 
 double extractRed(ARGBInt argb) {
-    return argb.asARGB.r/255.0;
+    return argb.asARGB.r / 255.0;
 }
 
 double extractGreen(ARGBInt argb) {
-    return argb.asARGB.g/255.0;
+    return argb.asARGB.g / 255.0;
 }
 
 double extractBlue(ARGBInt argb) {
-    return argb.asARGB.b/255.0;
+    return argb.asARGB.b / 255.0;
 }
