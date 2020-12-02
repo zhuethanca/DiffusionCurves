@@ -2,7 +2,6 @@
 // Created by Ethan on 11/27/2020.
 //
 
-#include <GL/glew.h>
 #include "graphics/BitmapRender.h"
 #include <iostream>
 

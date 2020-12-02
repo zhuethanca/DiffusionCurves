@@ -6,9 +6,10 @@
 #include <iostream>
 #include <cmath>
 #include <graphics/Util.h>
-#include "graphics/Curve.h"
 
-Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {}
+Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
+
+}
 
 void Bezier::update(GLFWwindow *window) {
     int lstate = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -135,7 +136,8 @@ void Bezier::updateBezier() {
 
         samples.emplace_back(handles.at(i+3).x, handles.at(i+3).y);
         norms.emplace_back(handles.at(i+3).y-handles.at(i+2).y, handles.at(i+2).x-handles.at(i+3).x);
-        (*norms.rbegin()).normalize();
+        Point& norm = (*norms.rbegin());
+        norm.normalize();
     }
 
     curve.offset(norms, offset_dist, pOffset);
@@ -178,7 +180,12 @@ void Bezier::subdivideBezier(double x1, double y1, double x2, double y2, double 
     {
         samples.emplace_back(x1234, y1234);
         norms.emplace_back(y234-y1234, x1234-x234);
-        (*norms.rbegin()).normalize();
+        Point& norm = (*norms.rbegin());
+        if (abs(norm.x) < 1E-4 && abs(norm.y) < 1E-4) {
+            norm.x = (y2-y1);
+            norm.y = (x1-x2);
+        }
+        norm.normalize();
         return;
     }
 

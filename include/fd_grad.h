@@ -20,6 +20,5 @@ typedef Eigen::Triplet<double> Tripletd;
 void fd_grad(
   const int nx,
   const int ny,
-  const double h,
   Eigen::SparseMatrix<double> & G);
 #endif

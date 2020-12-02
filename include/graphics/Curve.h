@@ -25,8 +25,9 @@ public:
                               std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max,
                               std::set<int> &intersections);
     static void finalizeArrayRender(Eigen::SparseMatrix<double> &target, double (*dupHandler)(const std::vector<double>&),
-                             size_t width, size_t height,
-                                    std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max);
+            size_t width, size_t height,
+            std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max,
+    bool (*keepFunc)(const int &row, const int &col, const double &value));
 
     template<class T>
     void interp(const std::map<double, T>& control, double (*extract) (T), std::vector<double>& res) {
@@ -39,7 +40,7 @@ public:
         auto iter = control.begin();
         int last = atIndex((*iter).first);
         double lastVal = extract((*iter).second);
-        for (int i = 0; i <= last; i ++) {
+        for (int i = 0; i < last; i ++) {
             res.push_back(lastVal);
         }
         for(iter++;iter != control.end(); iter ++) {

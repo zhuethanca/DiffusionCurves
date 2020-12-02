@@ -33,7 +33,6 @@ typedef Eigen::Triplet<double> Tripletd;
 void fd_partial_derivative(
   const int nx,
   const int ny,
-  const double h,
   const int dir,
   Eigen::SparseMatrix<double> & D);
 #endif

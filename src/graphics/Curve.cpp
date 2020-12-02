@@ -157,7 +157,7 @@ void Curve::renderToArray(const std::vector<double> &data, size_t width, size_t 
     std::vector<Tripletd> matList;
     std::set<int> intersections;
     renderToArray(data, width, height, index, col, dups, matList, max, intersections);
-    finalizeArrayRender(target, dupHandler, width, height, dups, matList, max);
+    finalizeArrayRender(target, dupHandler, width, height, dups, matList, max, nullptr);
 }
 
 void Curve::renderToArray(const std::vector<double> &data, size_t width, size_t height,
@@ -173,11 +173,12 @@ void Curve::renderToArray(const std::vector<double> &data, size_t width, size_t 
             intersections.insert(i);
     }
 }
-int count = 0;
+
 void Curve::finalizeArrayRender(Eigen::SparseMatrix<double> &target, double (*dupHandler)(const std::vector<double>&),
                                 size_t width, size_t height,
-                                std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max) {
-    target.setFromTriplets(matList.begin(), matList.end());
+                                std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max,
+                                bool (*keepFunc)(const int & row, const int & col, const double & value)) {
+    target.setFromTriplets(matList.begin(), matList.end(), [] (const double &,const double &b) { return b; });
 
     for (const auto& pair : dups) {
         if (pair.second.size() > 1) {
@@ -185,9 +186,8 @@ void Curve::finalizeArrayRender(Eigen::SparseMatrix<double> &target, double (*du
         }
     }
 
-    target.prune([](const int& row, const int& col, const double & value){
-        return 0 <= value && value <= 1;
-    });
+    if (keepFunc != nullptr)
+        target.prune(keepFunc);
 }
 
 /**

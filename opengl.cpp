@@ -73,8 +73,6 @@ int main() {
 )";
     int nx = WIDTH;
     int ny = HEIGHT;
-    Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
-    fd_grad(nx, ny, 2, G);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -100,29 +98,6 @@ int main() {
             colorCurve.render();
             if (handles)
                 colorCurve.renderHandles();
-        }
-
-        if (0&&!bezier.samples.empty()){
-            Eigen::SparseMatrix<double> norms;
-            colorCurve.renderNormToMatrix(norms, WIDTH, HEIGHT);
-            glBegin(GL_LINES);
-            for (int i = 0; i < bezier.samples.size(); i ++) {
-                Point &p = bezier.samples.at(i);
-                glColor3f(1.0, 1.0, 0);
-                glVertex2d(p.x, p.y);
-                double dx = norms.coeff(indexDx(p.x, p.y, WIDTH, HEIGHT), 0);
-                double dy = norms.coeff(indexDy(p.x, p.y, WIDTH, HEIGHT), 0);
-                glVertex2d(p.x + 20*dx, p.y + 20*dy);
-                if (rendered) {
-                    Eigen::MatrixXd B = G * finalImage;
-                    glColor3f(0.0, 1.0, 0);
-                    glVertex2d(p.x, p.y);
-                    dx = B(indexDx(p.x, p.y, WIDTH, HEIGHT), 0);
-                    dy = B(indexDy(p.x, p.y, WIDTH, HEIGHT), 0);
-                    glVertex2d(p.x + 20 * dx, p.y + 20 * dy);
-                }
-            }
-            glEnd();
         }
 
         glfwSwapBuffers(window);
@@ -165,8 +140,16 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         std::cout << "Processing..." << std::endl;
         Eigen::SparseMatrix<double> rgb;
         colorCurve.renderToMatrix(rgb, WIDTH, HEIGHT);
+
         Eigen::SparseMatrix<double> norms;
         colorCurve.renderNormToMatrix(norms, WIDTH, HEIGHT);
+//        for (int y = 100; y <= 200; y ++) {
+//            std::cout << "\t";
+//            for (int x = 97; x <= 106; x ++) {
+//                std::cout << norms.coeff(indexDx(x, y, WIDTH, HEIGHT), 0) << "\t";
+//            }
+//            std::cout << std::endl;
+//        }
         std::cout << "Solving..." << std::endl;
 
         std::set<int> known_set;
@@ -191,7 +174,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         int nx = WIDTH;
         int ny = HEIGHT;
         Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
-        fd_grad(nx, ny, 0.5, G);
+        fd_grad(nx, ny, G);
 
         Eigen::SparseMatrix<double> A = G.transpose() * G;
         Eigen::SparseMatrix<double> Aeq(0, A.rows());

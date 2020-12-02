@@ -292,13 +292,11 @@ void ColorCurve::renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width,
         nCurve.interp(nControl, extractRed, r);
         nCurve.interp(nControl, extractGreen, g);
         nCurve.interp(nControl, extractBlue, b);
-        nCurve.render(r, g, b);
         nCurve.renderToArray(r, width, height, index, 0, dups, matList, width * height, intersections);
         nCurve.renderToArray(g, width, height, index, 1, dups, matList, width * height, intersections);
         nCurve.renderToArray(b, width, height, index, 2, dups, matList, width * height, intersections);
     }
     dups.clear();
-
     for (int i = 1; i < bezier.samples.size(); i ++) {
         Point &p1 = bezier.pOffset.at(i - 1);
         Point &p2 = bezier.pOffset.at(i);
@@ -322,12 +320,9 @@ void ColorCurve::renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width,
         Point start((int) ((p1.x + p2.x + p3.x + p4.x) / 4), (int) ((p1.y + p2.y + p3.y + p4.y) / 4));
         flood_fill(start, flood_map, corner, dups, width, height);
     }
-    Curve::finalizeArrayRender(data, colordup, width, height, dups, matList, width * height);
-    for (int i = 0; i < bezier.samples.size(); i ++) {
-        Point &p1 = bezier.pOffset.at(i);
-        data.coeffRef(index((int) p1.x, (int) p1.y, width, height), 2) = 1.0;
-    }
-
+    Curve::finalizeArrayRender(data, colordup, width, height, dups, matList, width * height, [](const int& row, const int& col, const double & value){
+        return 0 <= value && value <= 1;
+    });
 }
 
 size_t indexDx(size_t x, size_t y, size_t width, size_t height) {
@@ -378,7 +373,7 @@ void ColorCurve::renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t wi
         curve.renderToArray(gdy, width, height, indexDy, 1, dups, matList, width * height * 2, intersections);
         curve.renderToArray(bdy, width, height, indexDy, 2, dups, matList, width * height * 2, intersections);
     }
-    Curve::finalizeArrayRender(data, normdup, width, height, dups, matList, width * height * 2);
+    Curve::finalizeArrayRender(data, normdup, width, height, dups, matList, width * height * 2, nullptr);
 }
 
 void ColorCurve::flood_fill(Point start, Eigen::MatrixXi &map, Point corner, std::map<int, std::vector<double>> &out,
