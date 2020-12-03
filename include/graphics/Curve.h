@@ -47,7 +47,7 @@ public:
             int curr = atIndex((*iter).first);
             double val = extract((*iter).second);
 
-            double diff[curr-last+1];
+            double* diff = new double[curr-last+1];
             diff[0] = 0;
             for (int i = last+1; i <= curr; i ++) {
                 diff[i-last] = diff[i-last-1] + samples.at(i-1).dist(samples.at(i));

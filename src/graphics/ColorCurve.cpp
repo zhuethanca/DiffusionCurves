@@ -6,12 +6,18 @@
 #include <iostream>
 #include <graphics/Util.h>
 #include <queue>
-#include <sys/param.h>
+
+
+// Custom MIN and MAX macros because sys/param.h in unavailable on Windows.
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
+
 
 ColorCurve::ColorCurve(Bezier &bezier) : bezier(bezier),
                                          pCurve(bezier.pOffset, bezier.segments),
                                          nCurve(bezier.nOffset, bezier.segments), unif(0, 1) {
-    re.seed(time(nullptr));
+    // Optional: On Linux, uncomment this line for random colour generation.
+    // re.seed(time(nullptr));
 }
 
 void ColorCurve::update(GLFWwindow *window) {

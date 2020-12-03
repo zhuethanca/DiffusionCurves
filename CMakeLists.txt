@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-project(curvature)
+project(diffusion_curves)
 SET(GCC_COMPILE_FLAGS "-g")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_definitions(${GCC_COMPILE_FLAGS})
@@ -10,12 +10,6 @@ option(LIBIGL_WITH_OPENGL            "Use OpenGL"         ON)
 option(LIBIGL_WITH_OPENGL_GLFW       "Use GLFW"           ON)
 
 find_package(LIBIGL REQUIRED)
-
-#find_package(GLEW REQUIRED)
-#if (GLEW_FOUND)
-#  include_directories(${GLEW_INCLUDE_DIRS})
-#  link_libraries(${GLEW_LIBRARIES})
-#endif()
 
 # Add your project files
 include_directories("include/")

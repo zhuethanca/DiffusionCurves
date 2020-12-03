@@ -6,8 +6,8 @@
 // Include standard headers
 #include <cstdio>
 #include <cstdlib>
-//// Include GLEW. Always include it before gl.h and glfw3.h, since it's a bit magic.
-//#include <GL/glew.h>
+// Include GLEW. Always include it before gl.h and glfw3.h, since it's a bit magic.
+// #include <GL/glew.h>
 // Include GLFW
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -42,8 +42,7 @@ int main() {
 
     glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
 
-    if (nullptr == window)
-    {
+    if (nullptr == window) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
 
@@ -52,14 +51,15 @@ int main() {
 
     glfwMakeContextCurrent(window);
 
-//    glewExperimental = GL_TRUE;
-//
-//    if (GLEW_OK != glewInit())
-//    {
-//        std::cout << "Failed to initialise GLEW" << std::endl;
-//
-//        return EXIT_FAILURE;
-//    }
+    /*
+    glewExperimental = GL_TRUE;
+
+    if (GLEW_OK != glewInit()) {
+        std::cout << "Failed to initialise GLEW" << std::endl;
+
+        return EXIT_FAILURE;
+    }
+    */
 
     glViewport(0, 0, screenWidth, screenHeight);
 
@@ -71,11 +71,8 @@ int main() {
     R,r      Render
     M,m      Show/Hide Bitmap
 )";
-    int nx = WIDTH;
-    int ny = HEIGHT;
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         glClearColor(1, 1, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
