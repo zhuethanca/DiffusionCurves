@@ -12,6 +12,10 @@ ColorCurve::ColorCurve(Bezier &bezier) : bezier(bezier),
                                          pCurve(bezier.pOffset, bezier.segments),
                                          nCurve(bezier.nOffset, bezier.segments), unif(0, 1) {
     re.seed(time(nullptr));
+    pControl.emplace(0, 4280620797);
+    pControl.emplace(1, 0x00FF00);
+    nControl.emplace(0, 4292560705);
+    nControl.emplace(1, 4283617022);
 }
 
 void ColorCurve::update(GLFWwindow *window) {

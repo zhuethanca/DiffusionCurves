@@ -3,12 +3,17 @@
 //
 
 #include "graphics/Bezier.h"
+#include "../../opengl.h"
 #include <iostream>
 #include <cmath>
 #include <graphics/Util.h>
 
 Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
-
+    handles.emplace_back(WIDTH * (253/1024.0), HEIGHT * (537/768.0));
+    handles.emplace_back(WIDTH * (619/1024.0), HEIGHT * (526/768.0));
+    handles.emplace_back(WIDTH * (424/1024.0), HEIGHT * (250/768.0));
+    handles.emplace_back(WIDTH * (804/1024.0), HEIGHT * (238/768.0));
+    updateBezier();
 }
 
 void Bezier::update(GLFWwindow *window) {

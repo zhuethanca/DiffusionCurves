@@ -11,11 +11,10 @@ option(LIBIGL_WITH_OPENGL_GLFW       "Use GLFW"           ON)
 
 find_package(LIBIGL REQUIRED)
 
-#find_package(GLEW REQUIRED)
-#if (GLEW_FOUND)
-#  include_directories(${GLEW_INCLUDE_DIRS})
-#  link_libraries(${GLEW_LIBRARIES})
-#endif()
+find_package( OpenCV REQUIRED )
+if (OpenCV_FOUND)
+  include_directories(${OpenCV_INCLUDE_DIRS})
+endif()
 
 # Add your project files
 include_directories("include/")
@@ -32,4 +31,4 @@ add_executable(diffusion_curves "main.cpp")
 target_link_libraries(diffusion_curves core igl::core igl::opengl igl::opengl_glfw)
 
 add_executable(opengl "opengl.cpp")
-target_link_libraries(opengl core igl::core igl::opengl igl::opengl_glfw)
+target_link_libraries(opengl core igl::core igl::opengl igl::opengl_glfw ${OpenCV_LIBS})

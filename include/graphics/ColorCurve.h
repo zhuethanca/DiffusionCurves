@@ -4,13 +4,12 @@
 #include <map>
 #include <cmath>
 #include <random>
+#include "Util.h"
 
 #define C_HANDLE_SIZE 10
 #define C_SELECTION_RADIUS 10
 #define C_SELECT_THK 2
 #define C_BORDER_THK 2
-
-typedef unsigned char ubyte;
 
 struct ARGB {
     ubyte b;
@@ -32,6 +31,12 @@ union ARGBInt {
 
 class ColorCurve {
 public:
+    std::map<double, ARGBInt> pControl;
+    std::map<double, ARGBInt> nControl;
+
+    Curve pCurve;
+    Curve nCurve;
+
     explicit ColorCurve(Bezier& bezier);
     void render();
     void renderHandles();
@@ -42,9 +47,6 @@ public:
 private:
     Bezier& bezier;
 
-    std::map<double, ARGBInt> pControl;
-    std::map<double, ARGBInt> nControl;
-
     std::uniform_real_distribution<double> unif;
     std::default_random_engine re;
 
@@ -52,8 +54,6 @@ private:
     bool epressed = false;
     bool pressed = false;
     bool rpressed = false;
-    Curve pCurve;
-    Curve nCurve;
 
     double selected = INFINITY;
     bool selectedP = false;

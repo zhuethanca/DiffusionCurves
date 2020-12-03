@@ -6,9 +6,7 @@
 // Include standard headers
 #include <cstdio>
 #include <cstdlib>
-//// Include GLEW. Always include it before gl.h and glfw3.h, since it's a bit magic.
-//#include <GL/glew.h>
-// Include GLFW
+#include "graphics/GaussianCurve.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <graphics/BitmapRender.h>
@@ -67,6 +65,7 @@ int main() {
     H,h      Show/Hide Handles
     B,b      Show/Hide Bezier Curve
     C,c      Show/Hide Color Curves
+    G,g      Show/Hide Gaussian Blur Curves
     E,e      Enter Color
     R,r      Render
     M,m      Show/Hide Bitmap
@@ -175,6 +174,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         int ny = HEIGHT;
         Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
         fd_grad(nx, ny, G);
+        G *= 1.5;
 
         Eigen::SparseMatrix<double> A = G.transpose() * G;
         Eigen::SparseMatrix<double> Aeq(0, A.rows());
@@ -186,5 +186,15 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
 
         bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
         rendered = true;
+    }
+    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+        std::vector<double> r, g, b;
+        colorCurve.pCurve.interp(colorCurve.pControl, extractRed, r);
+        colorCurve.pCurve.interp(colorCurve.pControl, extractGreen, g);
+        colorCurve.pCurve.interp(colorCurve.pControl, extractBlue, b);
+        for (int i = 0; i < r.size(); i ++) {
+            std::cout << "\"#" << std::hex << (ARGBInt(1.0, r.at(i), g.at(i), b.at(i)).asInt & 0xFFFFFF)
+            << "\"," << std::endl;
+        }
     }
 }

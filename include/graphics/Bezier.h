@@ -23,6 +23,7 @@ public:
     std::vector<Point> norms;
     std::vector<Point> nOffset;
     std::vector<Point> pOffset;
+    std::vector<Point> handles;
     Point* selected = NULL;
 
     void update(GLFWwindow* window);
@@ -34,7 +35,6 @@ private:
 
     bool pressed = false;
     bool rpressed = false;
-    std::vector<Point> handles;
 
     Curve curve = Curve(samples, segments);
 
