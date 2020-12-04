@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <iostream>
+#include <Eigen/Core>
 #include <functional>
 
 class Point {
@@ -11,6 +12,7 @@ public:
     Point(double x, double y);
     double dist(Point o) const;
     double sqdist(Point o) const;
+    Eigen::Vector2f toVector();
     double x;
     double y;
 

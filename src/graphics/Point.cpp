@@ -34,6 +34,13 @@ double Point::sqdist(Point o) const {
     return (x-o.x)*(x-o.x) + (y-o.y)*(y-o.y);
 }
 
+Eigen::Vector2f Point::toVector() {
+    Eigen::Vector2f converted;
+    converted << this->x, this->y;
+
+    return converted;
+}
+
 bool Point::operator==(const Point &rhs) const {
     return x == rhs.x &&
            y == rhs.y;
