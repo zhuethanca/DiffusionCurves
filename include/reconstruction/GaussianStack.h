@@ -34,6 +34,12 @@ class GaussianStack {
         int height();
 
         /*
+        * Restricts the height of the stack to <layers> layers, removing any
+        * images above that level.
+        */
+        void restrict(int layers);
+
+        /*
         * Returns the blurred RGB image at the <layer>'th layer.
         */
         cv::Mat layer(int layer);

@@ -21,7 +21,7 @@
 * param maxHeight: The maximum height of the stack.
 * param sigmaStep: The increase in Gaussian filter widths between each level.
 */
-GaussianStack::GaussianStack(cv::Mat image, double stdDevCutoff = 40.0, int maxHeight = -1, double sigmaStep = 0.4) {
+GaussianStack::GaussianStack(cv::Mat image, double stdDevCutoff, int maxHeight, double sigmaStep) {
 	this->levels.clear();
 
     double sigma;
@@ -58,6 +58,14 @@ int GaussianStack::height() {
     return this->levels.size();
 }
 
+
+/*
+ * Restricts the height of the stack to <layers> layers, removing any
+ * images above that level.
+ */
+void GaussianStack::restrict(int layers) {
+    this->levels.resize(layers);
+}
 
 /*
  * Returns the blurred RGB image at the <layer>'th layer.
