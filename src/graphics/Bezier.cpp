@@ -17,6 +17,12 @@ Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
 }
 
 void Bezier::update(GLFWwindow *window) {
+    int sftstate = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+    if (sftstate == GLFW_PRESS) {
+        shift = true;
+    } else if (sftstate == GLFW_RELEASE) {
+        shift = false;
+    }
     int lstate = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
     if (lstate == GLFW_PRESS) {
         double x, y;
@@ -44,16 +50,22 @@ void Bezier::update(GLFWwindow *window) {
 }
 
 void Bezier::onClick(double x, double y) {
-    Point newPoint(x, y);
-    for (Point& p : handles) {
-        if (p.dist(newPoint) < SELECTION_RADIUS) {
-            selected = &p;
-            return;
+    if (!shift) {
+        Point newPoint(x, y);
+        for (Point &p : handles) {
+            if (p.dist(newPoint) < SELECTION_RADIUS) {
+                selected = &p;
+                return;
+            }
         }
+        handles.emplace_back(x, y);
+        selected = &*handles.rbegin();
+        updateBezier();
+    } else {
+        handles.emplace_back(INFINITY, INFINITY);
+        selected = NULL;
+        updateBezier();
     }
-    handles.emplace_back(x, y);
-    selected = &*handles.rbegin();
-    updateBezier();
 }
 
 void Bezier::onRightClick(double x, double y) {
@@ -65,8 +77,10 @@ void Bezier::onRightClick(double x, double y) {
             break;
         }
     }
-    if (i != handles.end())
+    if (i != handles.end() && i+1 == handles.end()) {
         handles.erase(i);
+        selected = NULL;
+    }
     updateBezier();
 }
 
@@ -81,7 +95,7 @@ void Bezier::onDrag(double x, double y) {
 void Bezier::renderHandles() {
     glBegin(GL_QUADS);{
         glColor3f(0, 0, 0);
-        for (Point &p : handles) {
+        for (Point &p : handles) if (!isinfl(p.x)){
             drawCenteredRect(p.x, p.y, HANDLE_SIZE, HANDLE_SIZE);
         }
 
@@ -93,17 +107,25 @@ void Bezier::renderHandles() {
     glBegin(GL_LINES);{
         glColor3f(0, 0, 1);
         for (int i = 0; i < handles.size(); i += 3) {
-            if (i > 0) {
+            str:
+            if (i > 0 && !isinfl(handles.at(i-1).x)) {
                 Point &p1 = handles.at(i - 1);
                 Point &p2 = handles.at(i);
                 glVertex2f(p1.x, p1.y);
                 glVertex2f(p2.x, p2.y);
             }
-            if (i + 1 < handles.size()) {
+            if (i + 1 < handles.size() && !isinfl(handles.at(i+1).x)) {
                 Point &p1 = handles.at(i);
                 Point &p2 = handles.at(i+1);
                 glVertex2f(p1.x, p1.y);
                 glVertex2f(p2.x, p2.y);
+            }
+            for (int j = i; j <= i + 2; j ++) if (j < handles.size()){
+                if (isinfl(handles.at(j).x) || isinfl(handles.at(j).y)) {
+                    i = j + 1;
+                    if (i < handles.size())
+                        goto str;
+                }
             }
         }
     }glEnd();
@@ -125,6 +147,22 @@ void Bezier::updateBezier() {
     norms.emplace_back(0, 0);
 
     for (int i = 0; i+3 < handles.size(); i += 3) {
+        bool ctn = false;
+        int li = i;
+        for (int j = li; j <= li + 3; j ++) {
+            if (isinfl(handles.at(j).x) || isinfl(handles.at(j).y)) {
+                i = j+1;
+                if (!ctn) {
+                    segments.push_back(samples.size());
+                    voidSegments.emplace(segments.size()-1);
+                    samples.emplace_back(handles.at(i).x, handles.at(i).y);
+                    norms.emplace_back(0, 0);
+                    ctn = true;
+                }
+            }
+        }
+        if (i+3 >= handles.size())
+            break;
         Point& last = norms.at(norms.size()-1);
         Point newn(handles.at(i+1).y-handles.at(i).y, handles.at(i).x-handles.at(i+1).x);
         newn.normalize();

@@ -2,16 +2,22 @@
 #include <GLFW/glfw3.h>
 #include <cmath>
 
-Curve::Curve(std::vector<Point> &samples, std::vector<int>& segments) : samples(samples), segments(segments){
+Curve::Curve(std::vector<Point> &samples, std::vector<int> &segments, std::set<int> &voidSegments)
+        : samples(samples), segments(segments), voidSegments(voidSegments) {
 
 }
 
 void Curve::render() {
     glBegin(GL_LINES);{
         glColor3f(0, 0, 0);
-        for (int i = 1; i < samples.size(); i ++) {
-            Point &p1 = samples.at(i - 1);
-            Point &p2 = samples.at(i);
+        int segment = 0;
+        for (int i = 0; i < samples.size()-1; i ++) {
+            while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
+                segment ++;
+            if (voidSegments.find(segment) != voidSegments.end())
+                continue;
+            Point &p1 = samples.at(i);
+            Point &p2 = samples.at(i+1);
             glVertex2f(p1.x, p1.y);
             glVertex2f(p2.x, p2.y);
         }
@@ -20,12 +26,17 @@ void Curve::render() {
 
 void Curve::render(const std::vector<double>& r, const std::vector<double>& g, const std::vector<double>& b) {
     glBegin(GL_LINES);{
-        for (int i = 1; i < samples.size(); i ++) {
-            Point &p1 = samples.at(i - 1);
-            Point &p2 = samples.at(i);
-            glColor3f(r.at(i-1), g.at(i-1), b.at(i-1));
-            glVertex2f(p1.x, p1.y);
+        int segment = 0;
+        for (int i = 0; i < samples.size()-1; i ++) {
+            while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
+                segment ++;
+            if (voidSegments.find(segment) != voidSegments.end())
+                continue;
+            Point &p1 = samples.at(i);
+            Point &p2 = samples.at(i + 1);
             glColor3f(r.at(i), g.at(i), b.at(i));
+            glVertex2f(p1.x, p1.y);
+            glColor3f(r.at(i + 1), g.at(i + 1), b.at(i + 1));
             glVertex2f(p2.x, p2.y);
         }
     }glEnd();
@@ -164,11 +175,16 @@ void Curve::renderToArray(const std::vector<double> &data, size_t width, size_t 
                    size_t (*index)(size_t, size_t, size_t, size_t), size_t col,
                    std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max,
                    std::set<int> &intersections) {
-    for (int i = 1; i < samples.size(); i ++) {
-        Point& p1 = samples.at(i-1);
-        Point& p2 = samples.at(i);
-        double d1 = data.at(i-1);
-        double d2 = data.at(i);
+    int segment = 0;
+    for (int i = 0; i < samples.size()-1; i ++) {
+        while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
+            segment ++;
+        if (voidSegments.find(segment) != voidSegments.end())
+            continue;
+        Point& p1 = samples.at(i);
+        Point& p2 = samples.at(i+1);
+        double d1 = data.at(i);
+        double d2 = data.at(i+1);
         if (renderLine(p1, p2, d1, d2, width, height, index, matList, col, dups, max))
             intersections.insert(i);
     }

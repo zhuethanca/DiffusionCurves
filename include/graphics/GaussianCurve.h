@@ -6,9 +6,14 @@
 #include <cmath>
 #include <random>
 
+#define G_HANDLE_SIZE 10
+#define G_SELECTION_RADIUS 10
+#define G_SELECT_THK 2
+#define G_BORDER_THK 2
+
 class GaussianCurve {
 public:
-    std::map<double, ubyte> control;
+    std::map<double, double> control;
 
     Curve curve;
 
@@ -31,11 +36,10 @@ private:
     bool rpressed = false;
 
     double selected = INFINITY;
-    bool selectedP = false;
 
     void onClick(double x, double y);
     void onRightClick(double x, double y);
     void onDrag(double x, double y);
 
-    void selectColor();
+    void selectSigma();
 };

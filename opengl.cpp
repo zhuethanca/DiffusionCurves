@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "graphics/GaussianCurve.h"
+#include <unsupported/Eigen/MatrixFunctions>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <graphics/BitmapRender.h>
@@ -14,20 +15,31 @@
 #include "graphics/ColorCurve.h"
 #include "graphics/Util.h"
 #include <igl/min_quad_with_fixed.h>
+#include <sys/param.h>
+#include <iomanip>
+#include <unordered_map>
 #include "fd_grad.h"
+
+#define BLUR_PRECISION 8
 
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 bool handles = true;
 bool sBezier = true;
 bool sColor = false;
-bool sBmap = true;
+bool sGauss = false;
+int sBmap = 0;
 
 Bezier bezier(3);
 ColorCurve colorCurve(bezier);
+GaussianCurve gaussianCurve(bezier);
 BitmapRender bitmapRender;
+Eigen::MatrixXd rgbImage;
+Eigen::MatrixXd blurImage;
 Eigen::MatrixXd finalImage;
-bool rendered = false;
+bool rgbRendered = false;
+bool blurRendered = false;
+bool finalRendered = false;
 
 int main() {
     glfwInit();
@@ -49,16 +61,6 @@ int main() {
     }
 
     glfwMakeContextCurrent(window);
-
-//    glewExperimental = GL_TRUE;
-//
-//    if (GLEW_OK != glewInit())
-//    {
-//        std::cout << "Failed to initialise GLEW" << std::endl;
-//
-//        return EXIT_FAILURE;
-//    }
-
     glViewport(0, 0, screenWidth, screenHeight);
 
     std::cout<<R"(
@@ -66,16 +68,15 @@ int main() {
     B,b      Show/Hide Bezier Curve
     C,c      Show/Hide Color Curves
     G,g      Show/Hide Gaussian Blur Curves
-    E,e      Enter Color
+    J,j      Render Gaussian Blur Map
+    E,e      Enter Color/Sigma
     R,r      Render
-    M,m      Show/Hide Bitmap
+    M,m      Change Bitmap Mode
 )";
-    int nx = WIDTH;
-    int ny = HEIGHT;
 
     while (!glfwWindowShouldClose(window))
     {
-        glClearColor(1, 1, 1, 1);
+        glClearColor(0.5, 0.5, 0.5, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glMatrixMode( GL_PROJECTION );
@@ -85,18 +86,30 @@ int main() {
         glMatrixMode( GL_MODELVIEW );
         glLoadIdentity();
 
-        if (sBmap)
-            bitmapRender.render();
+        if (sBmap) {
+            if (sBmap == 1 && rgbRendered)
+                bitmapRender.render();
+            if (sBmap == 2 && blurRendered)
+                bitmapRender.render();
+            if (sBmap == 3 && finalRendered)
+                bitmapRender.render();
+        }
 
         if (sBezier) {
             bezier.renderCurve();
             if (handles)
                 bezier.renderHandles();
         }
+
         if (sColor) {
             colorCurve.render();
             if (handles)
                 colorCurve.renderHandles();
+        }
+        if (sGauss) {
+            gaussianCurve.render();
+            if (handles)
+                gaussianCurve.renderHandles();
         }
 
         glfwSwapBuffers(window);
@@ -109,11 +122,57 @@ int main() {
             bezier.update(window);
         if (sColor && handles)
             colorCurve.update(window);
+        if (sGauss && handles)
+            gaussianCurve.update(window);
     }
 
     glfwTerminate();
 
     return EXIT_SUCCESS;
+}
+
+void changeBitmap(int to) {
+    if (to == -1)
+        sBmap = (sBmap+1)%4;
+    else
+        sBmap = to % 4;
+    switch (sBmap) {
+        case 0:
+            std::cout << "Bitmap Mode: Off" << std::endl;
+            break;
+        case 1:
+            std::cout << "Bitmap Mode: Color" << std::endl;
+            bitmapRender.setData(rgbImage, WIDTH, HEIGHT, index);
+            break;
+        case 2:
+            std::cout << "Bitmap Mode: Blur" << std::endl;
+            bitmapRender.setGaussData(blurImage, WIDTH, HEIGHT, index);
+            break;
+        case 3:
+            std::cout << "Bitmap Mode: Final" << std::endl;
+            bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
+            break;
+    }
+}
+
+void generateGaussian(Eigen::MatrixXd &kernel, int x, int y, int width, int height,
+                      double sigma, int *kx, int *ky) {
+    int size = ceil(3*sigma);
+    int ls = MIN(size, x);
+    int rs = MIN(size, width-x-1);
+    int ts = MIN(size, y);
+    int bs = MIN(size, height-y-1);
+    kernel.resize(ls+rs+1, ts+bs+1);
+    *kx = x-ls;
+    *ky = y-ts;
+    for (int rx = x-ls; rx <= x+rs; rx ++) {
+        for (int ry = y-ts; ry <= y + bs; ry ++) {
+            kernel(rx-*kx, ry-*ky) = (rx-x)*(rx-x) + (ry-y)*(ry-y);
+        }
+    }
+    kernel /= -2*sigma*sigma;
+    kernel.array() = Eigen::exp(kernel.array());
+    kernel /= (2*EIGEN_PI*sigma*sigma);
 }
 
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -124,16 +183,59 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         sBezier = !(sBezier);
         if (sBezier) {
             sColor = false;
+            sGauss = false;
         }
     }
     if (key == GLFW_KEY_C && action == GLFW_PRESS) {
         sColor = !(sColor);
         if (sColor) {
             sBezier = false;
+            sGauss = false;
+        }
+    }
+    if (key == GLFW_KEY_G && action == GLFW_PRESS) {
+        sGauss = !(sGauss);
+        if (sGauss) {
+            sBezier = false;
+            sColor = false;
         }
     }
     if (key == GLFW_KEY_M && action == GLFW_PRESS) {
-        sBmap = !(sBmap);
+        changeBitmap(-1);
+    }
+    if (key == GLFW_KEY_J && action == GLFW_PRESS) {
+        std::cout << "Processing..." << std::endl;
+        Eigen::SparseMatrix<double> blur;
+        gaussianCurve.renderToMatrix(blur, WIDTH, HEIGHT);
+        std::set<int> known_set;
+        for (Eigen::SparseMatrix<double>::InnerIterator it(blur, 0); it; ++it) {
+            known_set.emplace(it.row());
+        }
+        Eigen::MatrixXd blurDense(known_set.size(), 1);
+        Eigen::VectorXi known(known_set.size());
+        {
+            int i = 0;
+            for (auto k : known_set) {
+                known(i) = k;
+                blurDense(i, 0) = blur.coeff(k, 0);
+                i++;
+            }
+        }
+
+        int nx = WIDTH;
+        int ny = HEIGHT;
+        Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
+        fd_grad(nx, ny, G);
+
+        Eigen::SparseMatrix<double> A = G.transpose() * G;
+        Eigen::SparseMatrix<double> Aeq(0, A.rows());
+
+        Eigen::SparseMatrix<double> B(G.rows(), 1);
+        Eigen::MatrixXd Beq = Eigen::MatrixXd::Zero(0, 0);
+
+        igl::min_quad_with_fixed(A, B.toDense(), known, blurDense, Aeq, Beq, false, blurImage);
+        changeBitmap(2);
+        blurRendered = true;
     }
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
         std::cout << "Processing..." << std::endl;
@@ -142,13 +244,6 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
 
         Eigen::SparseMatrix<double> norms;
         colorCurve.renderNormToMatrix(norms, WIDTH, HEIGHT);
-//        for (int y = 100; y <= 200; y ++) {
-//            std::cout << "\t";
-//            for (int x = 97; x <= 106; x ++) {
-//                std::cout << norms.coeff(indexDx(x, y, WIDTH, HEIGHT), 0) << "\t";
-//            }
-//            std::cout << std::endl;
-//        }
         std::cout << "Solving..." << std::endl;
 
         std::set<int> known_set;
@@ -182,10 +277,60 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         Eigen::SparseMatrix<double> B = G.transpose() * norms;
         Eigen::MatrixXd Beq = Eigen::MatrixXd::Zero(0, 0);
 
-        igl::min_quad_with_fixed(A, B.toDense(), known, rgbDense, Aeq, Beq, false, finalImage);
+        igl::min_quad_with_fixed(A, B.toDense(), known, rgbDense, Aeq, Beq, false, rgbImage);
 
-        bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
-        rendered = true;
+        changeBitmap(1);
+        rgbRendered = true;
+    }
+    if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+        if (!blurRendered || !rgbRendered) {
+            std::cout << "Render Color and Blur First!" << std::endl;
+        }
+        std::cout << "Blurring..." << std::endl;
+        finalImage.resizeLike(rgbImage);
+        std::unordered_map<double, Eigen::SparseMatrix<double, Eigen::RowMajor>> kernels;
+        std::vector<Tripletd> matList(ceil(blurImage.maxCoeff()*6)*rgbImage.rows());
+
+        for (int x = 0; x < WIDTH; x ++) {
+            std::cout << "\r" << std::setprecision(4) << ((x)/(double) WIDTH) * 100.0 << "%         " << std::flush;
+            for (int y = 0; y < HEIGHT; y ++) {
+                uint32_t idx = index(x, y, WIDTH, HEIGHT);
+                double sigma = blurImage(idx, 0);
+//                double sigma = ((int)(blurImage(idx, 0) * BLUR_PRECISION))/(double) BLUR_PRECISION;
+//                if (kernels.find(sigma) == kernels.end()) {
+//                    Eigen::MatrixXd kernel;
+//                    int kx, ky;
+//                    generateGaussian(kernel, x, y, WIDTH, HEIGHT, sigma, &kx, &ky);
+//                    auto res = kernels.emplace(std::piecewise_construct, std::make_tuple(sigma), std::make_tuple(1, rgbImage.rows()));
+//                    std::vector<Tripletd> matList(kernel.rows() * kernel.cols());
+//                    for (int rx = 0; rx < kernel.rows(); rx ++) {
+//                        for (int ry = 0; ry < kernel.cols(); ry ++) {
+//                            matList.emplace_back(0, index(kx+rx, ky+ry, WIDTH, HEIGHT), kernel(rx, ry));
+//                        }
+//                    }
+//                    res.first->second.setFromTriplets(matList.begin(), matList.end());
+//                    std::cout << kernel << std::endl;
+//                    return;
+//                } else hit ++;
+//                count ++;
+                Eigen::MatrixXd kernel;
+                int kx, ky;
+                generateGaussian(kernel, x, y, WIDTH, HEIGHT, sigma, &kx, &ky);
+                for (int rx = 0; rx < kernel.rows(); rx ++) {
+                    for (int ry = 0; ry < kernel.cols(); ry ++) {
+                        matList.emplace_back(index(x, y, WIDTH, HEIGHT), index(kx+rx, ky+ry, WIDTH, HEIGHT), kernel(rx, ry));
+                    }
+                }
+//                std::cout << kernel << std::endl << std::endl;
+            }
+        }
+        std::cout << std::endl;
+        Eigen::SparseMatrix<double, Eigen::RowMajor> kernelMatrix(rgbImage.rows(), rgbImage.rows());
+        kernelMatrix.setFromTriplets(matList.begin(), matList.end());
+//        kernelMatrix.setIdentity();
+        finalImage = kernelMatrix*rgbImage;
+        finalRendered = true;
+        changeBitmap(3);
     }
     if (key == GLFW_KEY_P && action == GLFW_PRESS) {
         std::vector<double> r, g, b;

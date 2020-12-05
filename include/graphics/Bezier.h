@@ -19,6 +19,7 @@ public:
     Bezier(double offset_dist);
 
     std::vector<int> segments;
+    std::set<int> voidSegments;
     std::vector<Point> samples;
     std::vector<Point> norms;
     std::vector<Point> nOffset;
@@ -35,8 +36,9 @@ private:
 
     bool pressed = false;
     bool rpressed = false;
+    bool shift = false;
 
-    Curve curve = Curve(samples, segments);
+    Curve curve = Curve(samples, segments, voidSegments);
 
     void onClick(double x, double y);
     void onRightClick(double x, double y);

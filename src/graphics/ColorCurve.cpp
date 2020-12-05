@@ -8,14 +8,23 @@
 #include <queue>
 #include <sys/param.h>
 
-ColorCurve::ColorCurve(Bezier &bezier) : bezier(bezier),
-                                         pCurve(bezier.pOffset, bezier.segments),
-                                         nCurve(bezier.nOffset, bezier.segments), unif(0, 1) {
+ColorCurve::ColorCurve(Bezier &bezier) : samples(bezier.samples), segments(bezier.segments), voidSegments(bezier.voidSegments),
+                                         pOffset(bezier.pOffset), nOffset(bezier.nOffset), norms(bezier.norms),
+                                         pCurve(bezier.pOffset, bezier.segments, bezier.voidSegments),
+                                         nCurve(bezier.nOffset, bezier.segments, bezier.voidSegments), unif(0, 1) {
     re.seed(time(nullptr));
     pControl.emplace(0, 4280620797);
     pControl.emplace(1, 0x00FF00);
     nControl.emplace(0, 4292560705);
     nControl.emplace(1, 4283617022);
+}
+
+ColorCurve::ColorCurve(std::vector<Point> &samples, std::vector<int> &segments, std::set<int> &voidSegments,
+                       std::vector<Point> &nOffset, std::vector<Point> &pOffset, std::vector<Point> &norms) :
+                       samples(samples), segments(segments), voidSegments(voidSegments), nOffset(nOffset),
+                       pOffset(pOffset), norms(norms), pCurve(pOffset, segments, voidSegments),
+                       nCurve(nOffset, segments, voidSegments), unif(0, 1) {
+    re.seed(time(nullptr));
 }
 
 void ColorCurve::update(GLFWwindow *window) {
@@ -301,11 +310,16 @@ void ColorCurve::renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width,
         nCurve.renderToArray(b, width, height, index, 2, dups, matList, width * height, intersections);
     }
     dups.clear();
-    for (int i = 1; i < bezier.samples.size(); i ++) {
-        Point &p1 = bezier.pOffset.at(i - 1);
-        Point &p2 = bezier.pOffset.at(i);
-        Point &p3 = bezier.nOffset.at(i - 1);
-        Point &p4 = bezier.nOffset.at(i);
+    int segment = 0;
+    for (int i = 0; i < samples.size()-1; i ++) {
+        while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
+            segment ++;
+        if (voidSegments.find(segment) != voidSegments.end())
+            continue;
+        Point &p1 = pOffset.at(i);
+        Point &p2 = pOffset.at(i+1);
+        Point &p3 = nOffset.at(i);
+        Point &p4 = nOffset.at(i+1);
 
         Point corner(
                 (int) MIN(MIN(MIN(p1.x, p2.x), p3.x), p4.x),
@@ -348,7 +362,7 @@ void ColorCurve::renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t wi
     data.resize(width * height * 2, 3);
     std::map<int, std::vector<double>> dups;
     std::vector<Tripletd> matList;
-    Curve curve(bezier.samples, bezier.segments);
+    Curve curve(samples, segments, voidSegments);
     std::set<int> intersections;
     {
         std::vector<double> pr, pg, pb, nr, ng, nb;
@@ -360,8 +374,8 @@ void ColorCurve::renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t wi
         nCurve.interp(nControl, extractBlue, nb);
 
         std::vector<double> rdx, rdy, gdx, gdy, bdx, bdy;
-        for (int i = 0; i < bezier.norms.size(); i++) {
-            Point &norm = bezier.norms.at(i);
+        for (int i = 0; i < norms.size(); i++) {
+            Point &norm = norms.at(i);
             rdx.emplace_back(norm.x * (pr.at(i) - nr.at(i)));
             gdx.emplace_back(norm.x * (pg.at(i) - ng.at(i)));
             bdx.emplace_back(norm.x * (pb.at(i) - nb.at(i)));

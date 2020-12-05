@@ -9,7 +9,7 @@ typedef Eigen::Triplet<double> Tripletd;
 
 class Curve {
 public:
-    explicit Curve(std::vector<Point> &samples, std::vector<int>& segments);
+    explicit Curve(std::vector<Point> &samples, std::vector<int> &segments, std::set<int> &voidSegments);
     void render();
     void render(const std::vector<double>& r, const std::vector<double>& g, const std::vector<double>& b);
     std::pair<Point, double> closestSample(Point& target);
@@ -73,5 +73,6 @@ public:
 private:
     std::vector<Point>& samples;
     std::vector<int>& segments;
+    std::set<int>& voidSegments;
     double computeSegmentPos(double t);
 };

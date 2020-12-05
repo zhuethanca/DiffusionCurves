@@ -38,6 +38,10 @@ public:
     Curve nCurve;
 
     explicit ColorCurve(Bezier& bezier);
+
+    ColorCurve(std::vector<Point> &samples, std::vector<int> &segments, std::set<int> &voidSegments,
+               std::vector<Point> &nOffset, std::vector<Point> &pOffset, std::vector<Point> &norms);
+
     void render();
     void renderHandles();
     void renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height);
@@ -45,7 +49,12 @@ public:
     void update(GLFWwindow *window);
 
 private:
-    Bezier& bezier;
+    std::vector<Point>& samples;
+    std::vector<int>& segments;
+    std::set<int>& voidSegments;
+    std::vector<Point> &nOffset;
+    std::vector<Point> &pOffset;
+    std::vector<Point> &norms;
 
     std::uniform_real_distribution<double> unif;
     std::default_random_engine re;
