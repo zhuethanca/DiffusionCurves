@@ -2,7 +2,6 @@
 // Created by Ethan on 12/3/2020.
 //
 
-#include <sys/param.h>
 #include "graphics/GaussianCurve.h"
 #include <map>
 

@@ -1,8 +1,8 @@
-//
-// Created by Ethan on 11/26/2020.
-//
 #pragma once
 typedef unsigned char ubyte;
+// Custom MIN and MAX macros because sys/param.h in unavailable on Windows.
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
 
 #include <cstddef>
 

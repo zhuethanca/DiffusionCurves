@@ -19,8 +19,6 @@
 #include <unordered_map>
 #include "fd_grad.h"
 
-#define BLUR_PRECISION 8
-
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 bool handles = true;

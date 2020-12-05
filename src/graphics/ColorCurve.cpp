@@ -4,13 +4,7 @@
 
 #include "graphics/ColorCurve.h"
 #include <iostream>
-#include <graphics/Util.h>
 #include <queue>
-
-
-// Custom MIN and MAX macros because sys/param.h in unavailable on Windows.
-#define MIN(a,b) (((a) < (b)) ? (a) : (b))
-#define MAX(a,b) (((a) > (b)) ? (a) : (b))
 
 
 ColorCurve::ColorCurve(Bezier &bezier) : samples(bezier.samples), segments(bezier.segments), voidSegments(bezier.voidSegments),
