@@ -98,7 +98,7 @@ void Bezier::onDrag(double x, double y) {
 void Bezier::renderHandles() {
     glBegin(GL_QUADS);{
         glColor3f(0, 0, 0);
-        for (Point &p : handles) if (!isinfl(p.x)){
+        for (Point &p : handles) if (!std::isinf(p.x)){
             drawCenteredRect(p.x, p.y, HANDLE_SIZE, HANDLE_SIZE);
         }
 
@@ -111,20 +111,20 @@ void Bezier::renderHandles() {
         glColor3f(0, 0, 1);
         for (int i = 0; i < handles.size(); i += 3) {
             str:
-            if (i > 0 && !isinfl(handles.at(i-1).x)) {
+            if (i > 0 && !std::isinf(handles.at(i-1).x)) {
                 Point &p1 = handles.at(i - 1);
                 Point &p2 = handles.at(i);
                 glVertex2f(p1.x, p1.y);
                 glVertex2f(p2.x, p2.y);
             }
-            if (i + 1 < handles.size() && !isinfl(handles.at(i+1).x)) {
+            if (i + 1 < handles.size() && !std::isinf(handles.at(i+1).x)) {
                 Point &p1 = handles.at(i);
                 Point &p2 = handles.at(i+1);
                 glVertex2f(p1.x, p1.y);
                 glVertex2f(p2.x, p2.y);
             }
             for (int j = i; j <= i + 2; j ++) if (j < handles.size()){
-                if (isinfl(handles.at(j).x) || isinfl(handles.at(j).y)) {
+                if (std::isinf(handles.at(j).x) || std::isinf(handles.at(j).y)) {
                     i = j + 1;
                     if (i < handles.size())
                         goto str;
@@ -153,7 +153,7 @@ void Bezier::updateBezier() {
         bool ctn = false;
         int li = i;
         for (int j = li; j <= li + 3; j ++) {
-            if (isinfl(handles.at(j).x) || isinfl(handles.at(j).y)) {
+            if (std::isinf(handles.at(j).x) || std::isinf(handles.at(j).y)) {
                 i = j+1;
                 if (!ctn) {
                     segments.push_back(samples.size());

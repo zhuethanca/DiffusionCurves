@@ -11,7 +11,7 @@ ColorCurve::ColorCurve(Bezier &bezier) : samples(bezier.samples), segments(bezie
                                          pOffset(bezier.pOffset), nOffset(bezier.nOffset), norms(bezier.norms),
                                          pCurve(bezier.pOffset, bezier.segments, bezier.voidSegments),
                                          nCurve(bezier.nOffset, bezier.segments, bezier.voidSegments), unif(0, 1) {
-    re.seed(time(nullptr));
+    // re.seed(time(nullptr));
     pControl.emplace(0, 4280620797);
     pControl.emplace(1, 65280);
     pControl.emplace(2, 4291651895);
@@ -25,7 +25,7 @@ ColorCurve::ColorCurve(std::vector<Point> &samples, std::vector<int> &segments, 
                        samples(samples), segments(segments), voidSegments(voidSegments), nOffset(nOffset),
                        pOffset(pOffset), norms(norms), pCurve(pOffset, segments, voidSegments),
                        nCurve(nOffset, segments, voidSegments), unif(0, 1) {
-    re.seed(time(nullptr));
+    // re.seed(time(nullptr));
 }
 
 void ColorCurve::update(GLFWwindow *window) {

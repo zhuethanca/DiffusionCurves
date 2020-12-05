@@ -63,7 +63,7 @@ void findBestPath(std::vector<int> &bestPath, PixelChain chain, Eigen::MatrixXd 
 }
 
 
-void potrace(std::vector<int> &polyline, PixelChain chain) {
+void potrace(std::vector<Point> &polyline, PixelChain chain) {
     const int nPoints = chain.length();
 
     Eigen::MatrixXd penalties(nPoints, nPoints);
@@ -151,8 +151,14 @@ void potrace(std::vector<int> &polyline, PixelChain chain) {
         }
     }
 
-    // std::vector<int> polyline;
-    findBestPath(polyline, chain, penalties);
+    std::vector<int> pathIndices;
+    findBestPath(pathIndices, chain, penalties);
+
+    polyline.clear();
+    for (int i = 0; i < pathIndices.size(); i++) {
+        Point point = chain.get(pathIndices.at(i));
+        polyline.push_back(point);
+    }
 
     /*
     std::cout << "For the chain ";

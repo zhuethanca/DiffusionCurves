@@ -11,13 +11,23 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <graphics/BitmapRender.h>
-#include "graphics/Bezier.h"
+#include <graphics/Bezier.h>
 #include "graphics/ColorCurve.h"
 #include "graphics/Util.h"
 #include <igl/min_quad_with_fixed.h>
 #include <iomanip>
 #include <unordered_map>
 #include "fd_grad.h"
+
+#include <reconstruction/GaussianStack.h>
+#include <reconstruction/EdgeStack.h>
+#include <reconstruction/PixelChain.h>
+#include <reconstruction/traceEdgePixels.h>
+#include <reconstruction/potrace.h>
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods);
 
@@ -27,18 +37,34 @@ bool sColor = false;
 bool sGauss = false;
 int sBmap = 0;
 
-Bezier bezier(3);
-ColorCurve colorCurve(bezier);
-GaussianCurve gaussianCurve(bezier);
+Bezier *beziers = new Bezier(3);
+ColorCurve *colorCurves = new ColorCurve(beziers[0]);
+GaussianCurve *gaussianCurves = new GaussianCurve(beziers[0]);
+
 BitmapRender bitmapRender;
 Eigen::MatrixXd rgbImage;
 Eigen::MatrixXd blurImage;
 Eigen::MatrixXd finalImage;
+
 bool rgbRendered = false;
 bool blurRendered = false;
 bool finalRendered = false;
 
-int main() {
+
+int main(int argc, char** argv) {
+    int width = WIDTH;
+    int height = HEIGHT;
+
+    if (argc == 2) {
+        char* filepath = argv[1];
+        cv::Mat image = cv::imread(argv[1]);
+
+        width = image.cols;
+        height = image.rows;
+
+        bitmapRender.setData(image);
+    }
+
     glfwInit();
 
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
@@ -67,11 +93,13 @@ int main() {
     J,j      Render Gaussian Blur Map
     E,e      Enter Color/Sigma
     R,r      Render
+
     M,m      Change Bitmap Mode
+
+    A,a      Auto-generate Curves from Image
 )";
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         glClearColor(0.5, 0.5, 0.5, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -92,20 +120,20 @@ int main() {
         }
 
         if (sBezier) {
-            bezier.renderCurve();
+            beziers[0].renderCurve();
             if (handles)
-                bezier.renderHandles();
+                beziers[0].renderHandles();
         }
 
         if (sColor) {
-            colorCurve.render();
+            colorCurves[0].render();
             if (handles)
-                colorCurve.renderHandles();
+                colorCurves[0].renderHandles();
         }
         if (sGauss) {
-            gaussianCurve.render();
+            gaussianCurves[0].render();
             if (handles)
-                gaussianCurve.renderHandles();
+                gaussianCurves[0].renderHandles();
         }
 
         glfwSwapBuffers(window);
@@ -115,11 +143,12 @@ int main() {
         glfwSetKeyCallback(window, handleEvents);
 
         if (sBezier && handles)
-            bezier.update(window);
+            beziers[0].update(window);
         if (sColor && handles)
-            colorCurve.update(window);
+            colorCurves[0].update(window);
         if (sGauss && handles)
-            gaussianCurve.update(window);
+            gaussianCurves[0].update(window);
+            colorCurves[0].update(window);
     }
 
     glfwTerminate();
@@ -172,6 +201,10 @@ void generateGaussian(Eigen::MatrixXd &kernel, int x, int y, int width, int heig
 }
 
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    int width;
+    int height;
+    glfwGetWindowSize(window, &width, &height);
+
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
         handles = !(handles);
     }
@@ -202,7 +235,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_J && action == GLFW_PRESS) {
         std::cout << "Processing..." << std::endl;
         Eigen::SparseMatrix<double> blur;
-        gaussianCurve.renderToMatrix(blur, WIDTH, HEIGHT);
+        gaussianCurves[0].renderToMatrix(blur, WIDTH, HEIGHT);
         std::set<int> known_set;
         for (Eigen::SparseMatrix<double>::InnerIterator it(blur, 0); it; ++it) {
             known_set.emplace(it.row());
@@ -236,10 +269,16 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
         std::cout << "Processing..." << std::endl;
         Eigen::SparseMatrix<double> rgb;
-        colorCurve.renderToMatrix(rgb, WIDTH, HEIGHT);
 
         Eigen::SparseMatrix<double> norms;
-        colorCurve.renderNormToMatrix(norms, WIDTH, HEIGHT);
+        colorCurves[0].renderNormToMatrix(norms, width, height);
+//        for (int y = 100; y <= 200; y ++) {
+//            std::cout << "\t";
+//            for (int x = 97; x <= 106; x ++) {
+//                std::cout << norms.coeff(indexDx(x, y, WIDTH, HEIGHT), 0) << "\t";
+//            }
+//            std::cout << std::endl;
+//        }
         std::cout << "Solving..." << std::endl;
 
         std::set<int> known_set;
@@ -278,6 +317,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         changeBitmap(1);
         rgbRendered = true;
     }
+
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
         if (!blurRendered || !rgbRendered) {
             std::cout << "Render Color and Blur First!" << std::endl;
@@ -311,20 +351,41 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_P && action == GLFW_PRESS) {
         std::cout << "Handles: " << std::endl;
-        for (auto & handle : bezier.handles) {
+        for (auto & handle : beziers->handles) {
             std::cout << handle << std::endl;
         }
         std::cout << "P Color: " << std::endl;
-        for (auto &ctrl : colorCurve.pControl) {
+        for (auto &ctrl : colorCurves->pControl) {
             std::cout << "(" << ctrl.first << ", " << ctrl.second.asInt << ")" << std::endl;
         }
         std::cout << "N Color: " << std::endl;
-        for (auto &ctrl : colorCurve.nControl) {
+        for (auto &ctrl : colorCurves->nControl) {
             std::cout << "(" << ctrl.first << ", " << ctrl.second.asInt << ")" << std::endl;
         }
         std::cout << "Blur: " << std::endl;
-        for (auto &ctrl : gaussianCurve.control) {
+        for (auto &ctrl : gaussianCurves->control) {
             std::cout << "(" << ctrl.first << ", " << ctrl.second << ")" << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+        cv::Mat image = bitmapRender.getData();
+
+        GaussianStack stack(image);
+        EdgeStack edges(stack, 80, 200);
+
+        std::vector<PixelChain> chains;
+        traceEdgePixels(chains, edges.layer(0), 5);
+
+        for (int i = 0; i < chains.size(); i++) {
+            PixelChain chain = chains.at(i);
+
+            std::vector<Point> polyline;
+            potrace(polyline, chain);
+
+            // Set the Bezier curve from this polyline.
+            beziers = new Bezier(polyline, 3);
+            colorCurves = new ColorCurve(beziers[0]);
         }
     }
 }
