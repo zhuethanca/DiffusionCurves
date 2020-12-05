@@ -6,7 +6,12 @@
 #include <iostream>
 #include <graphics/Util.h>
 #include <queue>
-#include <sys/param.h>
+
+
+// Custom MIN and MAX macros because sys/param.h in unavailable on Windows.
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
+
 
 ColorCurve::ColorCurve(Bezier &bezier) : samples(bezier.samples), segments(bezier.segments), voidSegments(bezier.voidSegments),
                                          pOffset(bezier.pOffset), nOffset(bezier.nOffset), norms(bezier.norms),

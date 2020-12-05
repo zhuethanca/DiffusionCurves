@@ -15,7 +15,6 @@
 #include "graphics/ColorCurve.h"
 #include "graphics/Util.h"
 #include <igl/min_quad_with_fixed.h>
-#include <sys/param.h>
 #include <iomanip>
 #include <unordered_map>
 #include "fd_grad.h"
@@ -52,8 +51,7 @@ int main() {
 
     glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
 
-    if (nullptr == window)
-    {
+    if (nullptr == window) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
 
@@ -296,23 +294,6 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
             for (int y = 0; y < HEIGHT; y ++) {
                 uint32_t idx = index(x, y, WIDTH, HEIGHT);
                 double sigma = blurImage(idx, 0);
-//                double sigma = ((int)(blurImage(idx, 0) * BLUR_PRECISION))/(double) BLUR_PRECISION;
-//                if (kernels.find(sigma) == kernels.end()) {
-//                    Eigen::MatrixXd kernel;
-//                    int kx, ky;
-//                    generateGaussian(kernel, x, y, WIDTH, HEIGHT, sigma, &kx, &ky);
-//                    auto res = kernels.emplace(std::piecewise_construct, std::make_tuple(sigma), std::make_tuple(1, rgbImage.rows()));
-//                    std::vector<Tripletd> matList(kernel.rows() * kernel.cols());
-//                    for (int rx = 0; rx < kernel.rows(); rx ++) {
-//                        for (int ry = 0; ry < kernel.cols(); ry ++) {
-//                            matList.emplace_back(0, index(kx+rx, ky+ry, WIDTH, HEIGHT), kernel(rx, ry));
-//                        }
-//                    }
-//                    res.first->second.setFromTriplets(matList.begin(), matList.end());
-//                    std::cout << kernel << std::endl;
-//                    return;
-//                } else hit ++;
-//                count ++;
                 Eigen::MatrixXd kernel;
                 int kx, ky;
                 generateGaussian(kernel, x, y, WIDTH, HEIGHT, sigma, &kx, &ky);
@@ -321,13 +302,11 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
                         matList.emplace_back(index(x, y, WIDTH, HEIGHT), index(kx+rx, ky+ry, WIDTH, HEIGHT), kernel(rx, ry));
                     }
                 }
-//                std::cout << kernel << std::endl << std::endl;
             }
         }
         std::cout << std::endl;
         Eigen::SparseMatrix<double, Eigen::RowMajor> kernelMatrix(rgbImage.rows(), rgbImage.rows());
         kernelMatrix.setFromTriplets(matList.begin(), matList.end());
-//        kernelMatrix.setIdentity();
         finalImage = kernelMatrix*rgbImage;
         finalRendered = true;
         changeBitmap(3);

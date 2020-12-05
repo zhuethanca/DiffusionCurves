@@ -2,6 +2,7 @@
 // Created by Ethan on 11/27/2020.
 //
 
+#include <GLFW/glfw3.h>
 #include "graphics/BitmapRender.h"
 #include <iostream>
 

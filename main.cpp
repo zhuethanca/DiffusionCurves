@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     int nx = WIDTH;
     int ny = HEIGHT;
     Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
-    fd_grad(nx, ny, 2, G);
+    fd_grad(nx, ny, G);
 
     Eigen::SparseMatrix<double> A = G.transpose() * G;
     Eigen::SparseMatrix<double> Aeq(0, A.rows());
