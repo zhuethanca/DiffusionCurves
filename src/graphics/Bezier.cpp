@@ -68,8 +68,9 @@ Bezier::Bezier(std::vector<Point> polyline, double offsetDist, double tension) {
         this->handles.push_back(nextControlHandle);
     }
 
+    // Correct the normal around the first handle.
     Eigen::Vector2f lastDerivative = derivatives.col(nPoints - 1);
-    Eigen::Vector2f lastControl = last + lastDerivative / 3.0;
+    Eigen::Vector2f lastControl = last - lastDerivative / 3.0;
 
     Point lastHandle = polyline.at(nPoints - 1);
     Point lastControlHandle(lastControl(0), lastControl(1));
@@ -77,7 +78,6 @@ Bezier::Bezier(std::vector<Point> polyline, double offsetDist, double tension) {
     this->handles.push_back(lastControlHandle);
     this->handles.push_back(lastHandle);
 
-    handles.emplace_back(INFINITY, INFINITY);
     this->updateBezier();
 }
 
@@ -208,9 +208,7 @@ void Bezier::updateBezier() {
         return;
     segments.push_back(samples.size());
 
-    Point first(handles.at(0).x, handles.at(0).y);
-
-    samples.emplace_back(first);
+    samples.emplace_back(handles.at(0).x, handles.at(0).y);
     norms.emplace_back(0, 0);
 
     for (int i = 0; i+3 < handles.size(); i += 3) {
@@ -231,12 +229,6 @@ void Bezier::updateBezier() {
         if (i + 3 >= handles.size()) {
             break;
         }
-        Point& last = norms.at(norms.size()-1);
-        Point newn(handles.at(i+1).y-handles.at(i).y, handles.at(i).x-handles.at(i+1).x);
-        newn.normalize();
-        last.x += newn.x;
-        last.y += newn.y;
-        last.normalize();
 
         subdivideBezier(handles.at(i+0).x, handles.at(i+0).y,
                         handles.at(i+1).x, handles.at(i+1).y,
@@ -251,6 +243,15 @@ void Bezier::updateBezier() {
         Point& norm = (*norms.rbegin());
         norm.normalize();
     }
+
+    Point& firstNorm = norms.front();
+
+    Point newFirstNorm(handles.at(1).y - handles.at(0).y, handles.at(0).x - handles.at(1).x);
+    newFirstNorm.normalize();
+
+    firstNorm.x += newFirstNorm.x;
+    firstNorm.y += newFirstNorm.y;
+    firstNorm.normalize();
 
     curve.offset(norms, offset_dist, pOffset);
     curve.offset(norms, -offset_dist, nOffset);
