@@ -4,8 +4,8 @@
 
 #ifndef MESH_RECONSTRUCTION_OPENGL_H
 #define MESH_RECONSTRUCTION_OPENGL_H
-#define WIDTH 1024
-#define HEIGHT 768
+#define WIDTH 1280
+#define HEIGHT 720
 
 class opengl {
 

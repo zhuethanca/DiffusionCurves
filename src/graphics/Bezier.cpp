@@ -9,13 +9,13 @@
 #include <graphics/Util.h>
 
 Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
-    handles.emplace_back(227, 533);
-    handles.emplace_back(440, 531);
-    handles.emplace_back(296, 238);
-    handles.emplace_back(521, 237);
-    handles.emplace_back(677, 240);
-    handles.emplace_back(639, 528);
-    handles.emplace_back(798, 531);
+    handles.emplace_back(WIDTH * (227/1024.0), HEIGHT * (533/768.0));
+    handles.emplace_back(WIDTH * (440/1024.0), HEIGHT * (531/768.0));
+    handles.emplace_back(WIDTH * (296/1024.0), HEIGHT * (238/768.0));
+    handles.emplace_back(WIDTH * (521/1024.0), HEIGHT * (237/768.0));
+    handles.emplace_back(WIDTH * (677/1024.0), HEIGHT * (240/768.0));
+    handles.emplace_back(WIDTH * (639/1024.0), HEIGHT * (528/768.0));
+    handles.emplace_back(WIDTH * (798/1024.0), HEIGHT * (531/768.0));
     updateBezier();
 }
 
@@ -164,8 +164,8 @@ void Bezier::updateBezier() {
                 }
             }
         }
-        if (i+3 >= handles.size())
-            break;
+        if (ctn)
+            continue;
         Point& last = norms.at(norms.size()-1);
         Point newn(handles.at(i+1).y-handles.at(i).y, handles.at(i).x-handles.at(i+1).x);
         newn.normalize();

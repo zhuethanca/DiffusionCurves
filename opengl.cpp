@@ -138,15 +138,18 @@ void changeBitmap(int to) {
             break;
         case 1:
             std::cout << "Bitmap Mode: Color" << std::endl;
-            bitmapRender.setData(rgbImage, WIDTH, HEIGHT, index);
+            if (rgbRendered)
+                bitmapRender.setData(rgbImage, WIDTH, HEIGHT, index);
             break;
         case 2:
             std::cout << "Bitmap Mode: Blur" << std::endl;
-            bitmapRender.setGaussData(blurImage, WIDTH, HEIGHT, index);
+            if (blurRendered)
+                bitmapRender.setGaussData(blurImage, WIDTH, HEIGHT, index);
             break;
         case 3:
             std::cout << "Bitmap Mode: Final" << std::endl;
-            bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
+            if (finalRendered)
+                bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
             break;
     }
 }
@@ -326,5 +329,16 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         for (auto &ctrl : gaussianCurve.control) {
             std::cout << "(" << ctrl.first << ", " << ctrl.second << ")" << std::endl;
         }
+    }
+    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        std::cout << "samples=[" << std::endl;
+        for (auto & handle : bezier.samples) {
+            std::cout << "(" <<
+            (2.0*handle.x/WIDTH-1.0) * 7.5
+            << ", " <<
+            -(2.0*handle.y/HEIGHT-1.0) * 4
+            << ", 0)," << std::endl;
+        }
+        std::cout << "]" << std::endl;
     }
 }
