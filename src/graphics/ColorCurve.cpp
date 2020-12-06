@@ -11,13 +11,23 @@ ColorCurve::ColorCurve(Bezier &bezier) : samples(bezier.samples), segments(bezie
                                          pOffset(bezier.pOffset), nOffset(bezier.nOffset), norms(bezier.norms),
                                          pCurve(bezier.pOffset, bezier.segments, bezier.voidSegments),
                                          nCurve(bezier.nOffset, bezier.segments, bezier.voidSegments), unif(0, 1) {
+    // Set all initial handles to black.
+    pControl.emplace(0, 0);
+    pControl.emplace(1, 0);
+    nControl.emplace(0, 0);
+    nControl.emplace(1, 0);
     // re.seed(time(nullptr));
+
+    /*
+    Colour controls for project demo.
+
     pControl.emplace(0, 4280620797);
     pControl.emplace(1, 65280);
     pControl.emplace(2, 4291651895);
     nControl.emplace(0, 4292560705);
     nControl.emplace(1, 4283617022);
     nControl.emplace(2, 4292742368);
+    */
 }
 
 ColorCurve::ColorCurve(std::vector<Point> &samples, std::vector<int> &segments, std::set<int> &voidSegments,
@@ -61,6 +71,7 @@ void ColorCurve::update(GLFWwindow *window) {
     }
     int estate = glfwGetKey(window, GLFW_KEY_E);
     if (estate == GLFW_PRESS) {
+        std::cout << "Detected E press" << std::endl;
         selectColor();
         epressed = true;
     } else if (estate == GLFW_RELEASE) {
@@ -259,6 +270,7 @@ void ColorCurve::selectColor() {
 double colordup(const std::vector<double> &dups) {
     return -1;
 }
+
 
 /**
  * Bresenham's line algorithm
