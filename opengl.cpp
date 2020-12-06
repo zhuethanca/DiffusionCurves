@@ -24,6 +24,7 @@
 #include <reconstruction/PixelChain.h>
 #include <reconstruction/traceEdgePixels.h>
 #include <reconstruction/potrace.h>
+#include <reconstruction/sampleBezierColours.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -48,28 +49,32 @@ BitmapRender bitmapRender;
 Eigen::MatrixXd rgbImage;
 Eigen::MatrixXd blurImage;
 Eigen::MatrixXd finalImage;
+cv::Mat backgroundImage;
 
 bool rgbRendered = false;
 bool blurRendered = false;
 bool finalRendered = false;
+bool imageRendered = false;
 
 
 int main(int argc, char** argv) {
-    if (argc == 2) {
+    if (argc >= 2) {
         char* filepath = argv[1];
-        cv::Mat image = cv::imread(argv[1]);
+        backgroundImage = cv::imread(argv[1]);
 
-        width = image.cols;
-        height = image.rows;
+        width = backgroundImage.cols;
+        height = backgroundImage.rows;
 
-        bitmapRender.setData(image);
+        bitmapRender.setData(backgroundImage);
+        imageRendered = true;
+        sBmap = 4;
     }
 
     glfwInit();
 
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
-    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Diffusion Curves", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(width, height, "Diffusion Curves", nullptr, nullptr);
 
     int screenWidth, screenHeight;
 
@@ -105,7 +110,7 @@ int main(int argc, char** argv) {
 
         glMatrixMode( GL_PROJECTION );
         glLoadIdentity();
-        glOrtho(0, WIDTH, HEIGHT, 0, -1.0, 1.0);
+        glOrtho(0, width, height, 0, -1.0, 1.0);
 
         glMatrixMode( GL_MODELVIEW );
         glLoadIdentity();
@@ -116,6 +121,8 @@ int main(int argc, char** argv) {
             if (sBmap == 2 && blurRendered)
                 bitmapRender.render();
             if (sBmap == 3 && finalRendered)
+                bitmapRender.render();
+            if (sBmap == 4 && imageRendered)
                 bitmapRender.render();
         }
 
@@ -167,15 +174,15 @@ void changeBitmap(int to) {
             break;
         case 1:
             std::cout << "Bitmap Mode: Color" << std::endl;
-            bitmapRender.setData(rgbImage, WIDTH, HEIGHT, index);
+            bitmapRender.setData(rgbImage, width, height, index);
             break;
         case 2:
             std::cout << "Bitmap Mode: Blur" << std::endl;
-            bitmapRender.setGaussData(blurImage, WIDTH, HEIGHT, index);
+            bitmapRender.setGaussData(blurImage, width, height, index);
             break;
         case 3:
             std::cout << "Bitmap Mode: Final" << std::endl;
-            bitmapRender.setData(finalImage, WIDTH, HEIGHT, index);
+            bitmapRender.setData(finalImage, width, height, index);
             break;
     }
 }
@@ -231,7 +238,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_J && action == GLFW_PRESS) {
         std::cout << "Processing..." << std::endl;
         Eigen::SparseMatrix<double> blur;
-        gaussianCurves[0].renderToMatrix(blur, WIDTH, HEIGHT);
+        gaussianCurves[0].renderToMatrix(blur, width, height);
         std::set<int> known_set;
         for (Eigen::SparseMatrix<double>::InnerIterator it(blur, 0); it; ++it) {
             known_set.emplace(it.row());
@@ -247,8 +254,8 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
             }
         }
 
-        int nx = WIDTH;
-        int ny = HEIGHT;
+        int nx = width;
+        int ny = height;
         Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
         fd_grad(nx, ny, G);
 
@@ -296,8 +303,8 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
             }
         }
 
-        int nx = WIDTH;
-        int ny = HEIGHT;
+        int nx = width;
+        int ny = height;
         Eigen::SparseMatrix<double> G(nx * ny * 2, nx * ny);
         fd_grad(nx, ny, G);
         G *= 1.5;
@@ -314,7 +321,8 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         rgbRendered = true;
     }
 
-    if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+        // TODO: Assign a key in the usage printout. J is a placeholder.
         if (!blurRendered || !rgbRendered) {
             std::cout << "Render Color and Blur First!" << std::endl;
         }
@@ -323,17 +331,17 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         std::unordered_map<double, Eigen::SparseMatrix<double, Eigen::RowMajor>> kernels;
         std::vector<Tripletd> matList(ceil(blurImage.maxCoeff()*6)*rgbImage.rows());
 
-        for (int x = 0; x < WIDTH; x ++) {
-            std::cout << "\r" << std::setprecision(4) << ((x)/(double) WIDTH) * 100.0 << "%         " << std::flush;
+        for (int x = 0; x < width; x ++) {
+            std::cout << "\r" << std::setprecision(4) << ((x)/(double) width) * 100.0 << "%         " << std::flush;
             for (int y = 0; y < HEIGHT; y ++) {
-                uint32_t idx = index(x, y, WIDTH, HEIGHT);
+                uint32_t idx = index(x, y, width, height);
                 double sigma = blurImage(idx, 0);
                 Eigen::MatrixXd kernel;
                 int kx, ky;
-                generateGaussian(kernel, x, y, WIDTH, HEIGHT, sigma, &kx, &ky);
+                generateGaussian(kernel, x, y, width, height, sigma, &kx, &ky);
                 for (int rx = 0; rx < kernel.rows(); rx ++) {
                     for (int ry = 0; ry < kernel.cols(); ry ++) {
-                        matList.emplace_back(index(x, y, WIDTH, HEIGHT), index(kx+rx, ky+ry, WIDTH, HEIGHT), kernel(rx, ry));
+                        matList.emplace_back(index(x, y, width, height), index(kx+rx, ky+ry, width, height), kernel(rx, ry));
                     }
                 }
             }
@@ -373,7 +381,9 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         std::vector<PixelChain> chains;
         traceEdgePixels(chains, edges.layer(0), 5);
 
-        for (int i = 0; i < chains.size(); i++) {
+        const int nChains = chains.size();
+
+        for (int i = 0; i < nChains; i++) {
             PixelChain chain = chains.at(i);
 
             std::vector<Point> polyline;
@@ -382,6 +392,24 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
             // Set the Bezier curve from this polyline.
             beziers = new Bezier(polyline, 3);
             colorCurves = new ColorCurve(beziers[0]);
+            gaussianCurves = new GaussianCurve(beziers[0]);
         }
+
+        sBezier = true;
+        sColor = false;
+        sGauss = false;
+    }
+
+    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        cv::Mat image = bitmapRender.getData();
+
+        cv::Mat imageLAB;
+        cv::cvtColor(image, imageLAB, cv::COLOR_BGR2Lab);
+
+        sampleBezierColours(beziers[0], colorCurves[0], image, imageLAB, 0.1);
+
+        sBezier = false;
+        sColor = true;
+        sGauss = false;
     }
 }
