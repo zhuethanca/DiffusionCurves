@@ -11,7 +11,9 @@ void Curve::render() {
     glBegin(GL_LINES);{
         glColor3f(0, 0, 0);
         int segment = 0;
-        for (int i = 0; i+1 < samples.size(); i ++) {
+
+        int sampleSize = samples.size();
+        for (int i = 0; i < sampleSize - 1; i++) {
             while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
                 segment ++;
             if (voidSegments.find(segment) != voidSegments.end())

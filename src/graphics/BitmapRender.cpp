@@ -87,9 +87,9 @@ void BitmapRender::setData(cv::Mat &data) {
 
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
-            this->data[((height - y - 1) * width + x) * 3 + 0] = (ubyte)(data.at<cv::Vec3b>(y, x)(0)) & 0xFF;
+            this->data[((height - y - 1) * width + x) * 3 + 0] = (ubyte)(data.at<cv::Vec3b>(y, x)(2)) & 0xFF;
             this->data[((height - y - 1) * width + x) * 3 + 1] = (ubyte)(data.at<cv::Vec3b>(y, x)(1)) & 0xFF;
-            this->data[((height - y - 1) * width + x) * 3 + 2] = (ubyte)(data.at<cv::Vec3b>(y, x)(2)) & 0xFF;
+            this->data[((height - y - 1) * width + x) * 3 + 2] = (ubyte)(data.at<cv::Vec3b>(y, x)(0)) & 0xFF;
         }
     }
 }

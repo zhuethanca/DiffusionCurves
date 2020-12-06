@@ -28,9 +28,18 @@ EdgeStack::EdgeStack(GaussianStack stack, double lowThreshold, double highThresh
 		cv::Mat edges;
 		cv::Canny(image, edges, lowThreshold, highThreshold);
 
+		this->levels.push_back(edges);
+
 		nonzeros = cv::countNonZero(edges);
 	}
 
+	if (nonzeros == 0) {
+		// Remove the top level if it had no detectable edge pixels.
+		this->levels.pop_back();
+	}
+
+	// Trim any blurred images from the Gaussian stack beyond the point
+	// where edges stopped being detectable.
 	int edgeHeight = this->height();
 	if (edgeHeight < stackHeight) {
 		stack.restrict(edgeHeight);
