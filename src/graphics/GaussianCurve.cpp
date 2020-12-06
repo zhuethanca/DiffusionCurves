@@ -8,8 +8,9 @@
 GaussianCurve::GaussianCurve(Bezier &bezier) : bezier(bezier),
                                                curve(bezier.samples, bezier.segments, bezier.voidSegments) {
     re.seed(time(nullptr));
-    control.emplace(0, 1);
-    control.emplace(1, 2);
+    control.emplace(0, 2);
+    control.emplace(1, 0);
+    control.emplace(2, 2);
 }
 
 void GaussianCurve::update(GLFWwindow *window) {

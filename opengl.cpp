@@ -43,7 +43,7 @@ int main() {
 
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
-    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Learn OpenGL", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Diffusion Curves", nullptr, nullptr);
 
     int screenWidth, screenHeight;
 
@@ -213,7 +213,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
             int i = 0;
             for (auto k : known_set) {
                 known(i) = k;
-                blurDense(i, 0) = blur.coeff(k, 0);
+                blurDense(i, 0) = MAX(blur.coeff(k, 0), 0.6); //Cutoff due to numerical instability
                 i++;
             }
         }
@@ -310,13 +310,21 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         changeBitmap(3);
     }
     if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-        std::vector<double> r, g, b;
-        colorCurve.pCurve.interp(colorCurve.pControl, extractRed, r);
-        colorCurve.pCurve.interp(colorCurve.pControl, extractGreen, g);
-        colorCurve.pCurve.interp(colorCurve.pControl, extractBlue, b);
-        for (int i = 0; i < r.size(); i ++) {
-            std::cout << "\"#" << std::hex << (ARGBInt(1.0, r.at(i), g.at(i), b.at(i)).asInt & 0xFFFFFF)
-            << "\"," << std::endl;
+        std::cout << "Handles: " << std::endl;
+        for (auto & handle : bezier.handles) {
+            std::cout << handle << std::endl;
+        }
+        std::cout << "P Color: " << std::endl;
+        for (auto &ctrl : colorCurve.pControl) {
+            std::cout << "(" << ctrl.first << ", " << ctrl.second.asInt << ")" << std::endl;
+        }
+        std::cout << "N Color: " << std::endl;
+        for (auto &ctrl : colorCurve.nControl) {
+            std::cout << "(" << ctrl.first << ", " << ctrl.second.asInt << ")" << std::endl;
+        }
+        std::cout << "Blur: " << std::endl;
+        for (auto &ctrl : gaussianCurve.control) {
+            std::cout << "(" << ctrl.first << ", " << ctrl.second << ")" << std::endl;
         }
     }
 }

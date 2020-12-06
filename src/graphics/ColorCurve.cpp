@@ -13,9 +13,11 @@ ColorCurve::ColorCurve(Bezier &bezier) : samples(bezier.samples), segments(bezie
                                          nCurve(bezier.nOffset, bezier.segments, bezier.voidSegments), unif(0, 1) {
     re.seed(time(nullptr));
     pControl.emplace(0, 4280620797);
-    pControl.emplace(1, 0x00FF00);
+    pControl.emplace(1, 65280);
+    pControl.emplace(2, 4291651895);
     nControl.emplace(0, 4292560705);
     nControl.emplace(1, 4283617022);
+    nControl.emplace(2, 4292742368);
 }
 
 ColorCurve::ColorCurve(std::vector<Point> &samples, std::vector<int> &segments, std::set<int> &voidSegments,

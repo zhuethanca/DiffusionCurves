@@ -11,7 +11,7 @@ void Curve::render() {
     glBegin(GL_LINES);{
         glColor3f(0, 0, 0);
         int segment = 0;
-        for (int i = 0; i < samples.size()-1; i ++) {
+        for (int i = 0; i+1 < samples.size(); i ++) {
             while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
                 segment ++;
             if (voidSegments.find(segment) != voidSegments.end())
@@ -27,7 +27,7 @@ void Curve::render() {
 void Curve::render(const std::vector<double>& r, const std::vector<double>& g, const std::vector<double>& b) {
     glBegin(GL_LINES);{
         int segment = 0;
-        for (int i = 0; i < samples.size()-1; i ++) {
+        for (int i = 0; i+1 < samples.size(); i ++) {
             while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
                 segment ++;
             if (voidSegments.find(segment) != voidSegments.end())
@@ -176,7 +176,7 @@ void Curve::renderToArray(const std::vector<double> &data, size_t width, size_t 
                    std::map<int, std::vector<double>> &dups, std::vector<Tripletd> &matList, int max,
                    std::set<int> &intersections) {
     int segment = 0;
-    for (int i = 0; i < samples.size()-1; i ++) {
+    for (int i = 0; i+1 < samples.size(); i ++) {
         while (segment + 1 < segments.size() && segments.at(segment) <= i && i < segments.at(segment+1))
             segment ++;
         if (voidSegments.find(segment) != voidSegments.end())
