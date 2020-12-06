@@ -347,6 +347,17 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
 
         igl::min_quad_with_fixed(A, B.toDense(), known, rgbDense, Aeq, Beq, false, rgbImage);
 
+        // Normalize the image into the range 0.0 - 1.0.
+        const double min = rgbImage.minCoeff();
+        const double max = rgbImage.maxCoeff();
+
+        Eigen::MatrixXd constantTerm;
+        constantTerm.resizeLike(rgbImage);
+        constantTerm.setConstant(min);
+
+        rgbImage -= constantTerm;
+        rgbImage /= (max - min);
+
         changeBitmap(1);
         rgbRendered = true;
     }
