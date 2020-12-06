@@ -29,6 +29,9 @@
 #include <opencv2/highgui/highgui.hpp>
 
 
+int width = WIDTH;
+int height = HEIGHT;
+
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 bool handles = true;
@@ -52,9 +55,6 @@ bool finalRendered = false;
 
 
 int main(int argc, char** argv) {
-    int width = WIDTH;
-    int height = HEIGHT;
-
     if (argc == 2) {
         char* filepath = argv[1];
         cv::Mat image = cv::imread(argv[1]);
@@ -201,10 +201,6 @@ void generateGaussian(Eigen::MatrixXd &kernel, int x, int y, int width, int heig
 }
 
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    int width;
-    int height;
-    glfwGetWindowSize(window, &width, &height);
-
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
         handles = !(handles);
     }
