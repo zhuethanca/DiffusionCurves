@@ -28,55 +28,22 @@ class GaussianStack {
          * param maxHeight: The maximum height of the stack.
          * param sigmaStep: The increase in Gaussian filter widths between each level.
          */
-        GaussianStack(cv::Mat image, double stdDevCutoff = 40.0, int maxHeight = -1, double sigmaStep = 0.4) {
-            this->levels.clear();
-
-            double sigma;
-            double stdDev;
-
-            int remainingHeight = maxHeight;
-
-            do {
-                // Define parameters for the next level of Gaussian filter.
-                const int radius = std::ceil(2 * sigma);
-                const int width = 2 * radius + 1;
-
-                cv::Mat blurred;
-                cv::GaussianBlur(image, blurred, cv::Size(width, width), sigma, sigma);
-
-                // Compute the image's standard deviation, averaged over three channels.
-                cv::Scalar mean, stdDevChannels;
-                cv::meanStdDev(blurred, mean, stdDevChannels);
-
-                stdDev = (stdDevChannels[0] + stdDevChannels[1] + stdDevChannels[2]) / 3.0;
-                sigma += 0.4;
-
-                this->levels.push_back(blurred);
-
-                remainingHeight -= 1;
-            } while (stdDev >= stdDevCutoff && remainingHeight != 0);
-        }
+        GaussianStack(cv::Mat image, double stdDevCutoff = 40.0, int maxHeight = -1, double sigmaStep = 0.4);
 
         /*
          * Returns the number of levels in the scale space.
          */
-        int height() {
-            return this->levels.size();
-        }
+        int height();
 
         /*
          * Restricts the height of the stack to <layers> layers, removing any
          * images above that level.
          */
-        void restrict(int layers) {
-            this->levels.resize(layers);
-        }
+        void restrict(int layers);
 
         /*
          * Returns the blurred RGB image at the <layer>'th layer.
          */
-        cv::Mat layer(int layer) {
-            return this->levels.at(layer);
-        }
+        cv::Mat layer(int layer);
 };
 

@@ -16,40 +16,34 @@ class PixelChain {
         /*
          * Create a new empty chain of pixels.
          */
-        PixelChain() {
-            this->points.clear();
-        }
+        PixelChain();
 
         /*
          * Create a new chain of pixels which is a copy of <other>.
          * 
          * param other: Reference to another continuous pixel chain.
          */
-        PixelChain(const PixelChain& other) {
-            // Use the implicit copy constructor for deques.
-            this->points = other.points;
-        }
+        PixelChain(const PixelChain& other);
 
         /*
          * Returns the number of pixels in the chain.
          */
-        int length() {
-            return this->points.size();
-        }
+        int length();
 
         /*
          * Returns the first pixel position in the chain.
          */
-        Point head() {
-            return this->points.front();
-        }
+        Point head();
 
         /*
          * Returns the last pixel position in the chain.
          */
-        Point tail() {
-            return this->points.back();
-        }
+        Point tail();
+
+        /*
+         * Returns the <index>'th pixel position in the chain.
+         */
+        Point get(int index);
 
         /*
          * Expands the pixel chain by attaching a new pixel to the front.
@@ -57,9 +51,7 @@ class PixelChain {
          * param point: A pixel location which is adjacent to the current head
          *              of the chain.
          */
-        void prepend(Point point) {
-            this->points.push_front(point);
-        }
+        void prepend(Point point);
 
         /*
          * Expands the pixel chain by attaching a new pixel to the end.
@@ -67,31 +59,18 @@ class PixelChain {
          * param point: A pixel location which is adjacent to the current tail
          *              of the chain.
          */
-        void append(Point point) {
-            this->points.push_back(point);
-        }
+        void append(Point point);
 
         /*
          * Reverses the order of pixels in this chain, in-place.
          */
-        void reverse() {
-            std::reverse(this->points.begin(), this->points.end());
-        }
-
-        Point get(int index) {
-            return this->points.at(index);
-        }
+        void reverse();
 
         /*
          * Returns a copy of this pixel chain in reverse order. Does not modify
          * this pixel chain.
          */
-        PixelChain reversed() {
-            PixelChain* copy = new PixelChain(*this);
-            copy->reverse();
-
-            return *copy;
-        }
+        PixelChain reversed();
 
         /*
          * Extends this pixel chain by adding an entire other chain to the front.
@@ -102,14 +81,7 @@ class PixelChain {
          * 
          * param other: Another chain of pixels to add to this one.
          */
-        void insertFront(PixelChain other) {
-            std::deque<Point> copy = other.points;
-
-            for (int i = 0; i < other.length(); i++) {
-                this->prepend(copy.back());
-                copy.pop_back();
-            }
-        }
+        void insertFront(PixelChain other);
 
         /*
          * Extends this pixel chain by adding an entire other chain to the back.
@@ -120,12 +92,5 @@ class PixelChain {
          *
          * param other: Another chain of pixels to add to this one.
          */
-        void insertBack(PixelChain other) {
-            std::deque<Point> copy = other.points;
-
-            for (int i = 0; i < other.length(); i++) {
-                this->append(copy.front());
-                copy.pop_front();
-            }
-        }
+        void insertBack(PixelChain other);
 };
