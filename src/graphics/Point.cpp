@@ -30,6 +30,13 @@ double Point::norm() const {
     return sqrt(x*x + y*y);
 }
 
+
+bool Point::isNeighbour(const Point other) {
+    // True if the two points are diagonally connected; false if they are
+    // separated by more than 1 pixels on any axis.
+    return this->sqdist(other) < 3.0;
+}
+
 double Point::sqdist(Point o) const {
     return (x-o.x)*(x-o.x) + (y-o.y)*(y-o.y);
 }

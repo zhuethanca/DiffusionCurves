@@ -86,28 +86,27 @@ void traceEdgePixels(std::vector<PixelChain> &chains,
         // Look for any existing chains that connect to this one, and merge
         // them into one longer chain.
         for (int j = 0; j < growingChains.size(); j++) {
-            PixelChain chain = growingChains.at(j);
-            Point chainHead = chain.head();
-            Point chainTail = chain.tail();
+            Point chainHead = growingChains.at(j).head();
+            Point chainTail = growingChains.at(j).tail();
 
             Point newcomerHead = points.head();
             Point newcomerTail = points.tail();
 
-            if (chainTail.sqdist(newcomerHead) <= 1.0) {
+            if (chainTail.isNeighbour(newcomerHead)) {
                 // Insert the new chain at the end of the old chain.
-                chain.insertBack(points);
+                growingChains.at(j).insertBack(points);
                 newChain = false;
-            } else if (chainTail.sqdist(newcomerTail) <= 1.0) {
+            } else if (chainTail.isNeighbour(newcomerTail)) {
                 // Insert the new chain backwards at the end of the old chain.
-                chain.insertBack(points.reversed());
+                growingChains.at(j).insertBack(points.reversed());
                 newChain = false;
-            } else if (chainHead.sqdist(newcomerTail) <= 1.0) {
+            } else if (chainHead.isNeighbour(newcomerTail)) {
                 // Insert the new chain at the front of the old one.
-                chain.insertFront(points);
+                growingChains.at(j).insertFront(points);
                 newChain = false;
-            } else if (chainHead.sqdist(newcomerHead) <= 1.0) {
+            } else if (chainHead.isNeighbour(newcomerHead)) {
                 // Insert the new chain backwards at the front of the old one.
-                chain.insertFront(points.reversed());
+                growingChains.at(j).insertFront(points.reversed());
                 newChain = false;
             }
         }

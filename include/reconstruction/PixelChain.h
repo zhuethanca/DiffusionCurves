@@ -106,8 +106,8 @@ class PixelChain {
             std::deque<Point> copy = other.points;
 
             for (int i = 0; i < other.length(); i++) {
-                this->prepend(copy.front());
-                copy.pop_front();
+                this->prepend(copy.back());
+                copy.pop_back();
             }
         }
 
@@ -124,8 +124,8 @@ class PixelChain {
             std::deque<Point> copy = other.points;
 
             for (int i = 0; i < other.length(); i++) {
-                this->append(copy.back());
-                copy.pop_back();
+                this->append(copy.front());
+                copy.pop_front();
             }
         }
 };

@@ -18,6 +18,7 @@ public:
 
     double norm() const;
     void normalize();
+    bool isNeighbour(const Point other);
 
     bool operator==(const Point &rhs) const;
     bool operator!=(const Point &rhs) const;
