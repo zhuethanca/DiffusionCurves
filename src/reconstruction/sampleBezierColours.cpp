@@ -66,6 +66,11 @@ void sampleBezierColours(Bezier &curve,
             cumulativeLengths(c) = totalCurveLength;
         }
 
+        if (totalCurveLength <= 2) {
+            curve.voidSegments.insert(curve.getCurveSegment(curveIndex));
+            continue;
+        }
+
         // Take a number of samples proportinal to the total length of the curve.
         const int nSamples = std::ceil(totalCurveLength * sampleDensity);
         std::uniform_real_distribution<double> distribution(0.0, totalCurveLength);
@@ -86,8 +91,8 @@ void sampleBezierColours(Bezier &curve,
 
         // Continue to sample more random points until enough have been found or
         // all have been tried.
-        while ((pColours.size() < nSamples || nColours.size() < nSamples)
-               && visited.size() < totalCurveLength) {
+        for (int trials = 0; trials < 50 && (pColours.size() < nSamples || nColours.size() < nSamples)
+               && visited.size() < totalCurveLength; trials ++) {
 
             // Generate a random position along the curve.
             double samplePosition = distribution(rng);
@@ -131,7 +136,6 @@ void sampleBezierColours(Bezier &curve,
             Eigen::Vector2f pNormal = rotation * tangent;
             Eigen::Vector2f nNormal = -pNormal;
 
-            int trials = 0;
             if (pColours.size() < nSamples) {
                 // Look for a new "positive" colour sample at this point.
                 cv::Vec3b *pColour = sampleAlongNormal(image, imageLab, point, pNormal);
@@ -140,14 +144,9 @@ void sampleBezierColours(Bezier &curve,
                     // Colour sample is valid.
                     pPositions.push_back(curveId + curvePercent);
                     pColours.push_back(*pColour);
-                    trials = 0;
-                } else {
-                    trials ++;
-                    if (trials > 50)
-                        break;
                 }
             }
-            trials = 0;
+
             if (nColours.size() < nSamples) {
                 // Look for a new "negative" colour sample at this point.
                 cv::Vec3b *nColour = sampleAlongNormal(image, imageLab, point, nNormal);
@@ -156,11 +155,6 @@ void sampleBezierColours(Bezier &curve,
                     // Colour sample is valid.
                     nPositions.push_back(curveId + curvePercent);
                     nColours.push_back(*nColour);
-                    trials = 0;
-                } else {
-                    trials ++;
-                    if (trials > 50)
-                        break;
                 }
             }
         }
