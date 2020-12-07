@@ -48,11 +48,17 @@ Eigen::MatrixXd rgbImage;
 Eigen::MatrixXd blurImage;
 Eigen::MatrixXd finalImage;
 cv::Mat backgroundImage;
+cv::Mat backgroundEdges;
 
 bool rgbRendered = false;
 bool blurRendered = false;
 bool finalRendered = false;
 bool imageRendered = false;
+bool edgesRendered = false;
+
+double cannyUpperThreshold = 200;
+double cannyLowerThreshold = 80;
+double samplingDensity = 0.1;
 
 
 int main(int argc, char** argv) {
@@ -62,6 +68,8 @@ int main(int argc, char** argv) {
     if (argc >= 2) {
         char* filepath = argv[1];
         backgroundImage = cv::imread(argv[1]);
+
+        cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
 
         width = backgroundImage.cols;
         height = backgroundImage.rows;
@@ -96,13 +104,17 @@ int main(int argc, char** argv) {
     B,b      Show/Hide Bezier Curve
     C,c      Show/Hide Color Curves
     G,g      Show/Hide Gaussian Blur Curves
+    E,e      View Background Edges
+    M,m      Change Bitmap Mode
     J,j      Render Gaussian Blur Map
-    E,e      Enter Color/Sigma
+    X,x      Enter Color/Sigma
     R,r      Render
 
-    M,m      Change Bitmap Mode
-
     A,a      Auto-generate Curves from Image
+    S,s      Sample Colours from Image
+    D,d      Raise/Lower Colour Sampling Density
+    U,u      Raise/Lower Upper Canny Threshold
+    L,l      Raise/Lower Lower Canny Threshold
 )";
 
     while (!glfwWindowShouldClose(window)) {
@@ -124,6 +136,8 @@ int main(int argc, char** argv) {
             if (sBmap == 3 && finalRendered)
                 bitmapRender.render();
             if (sBmap == 4 && imageRendered)
+                bitmapRender.render();
+            if (sBmap == 5 && edgesRendered)
                 bitmapRender.render();
         }
         if (sBezier) {
@@ -172,7 +186,7 @@ void changeBitmap(int to) {
     if (to == -1)
         sBmap = (sBmap+1)%4;
     else
-        sBmap = to % 4;
+        sBmap = to % 6;
     switch (sBmap) {
         case 0:
             std::cout << "Bitmap Mode: Off" << std::endl;
@@ -191,6 +205,14 @@ void changeBitmap(int to) {
             std::cout << "Bitmap Mode: Final" << std::endl;
             if (finalRendered)
                 bitmapRender.setData(finalImage, width, height, index);
+            break;
+        case 4:
+            std::cout << "Bitmap Mode: Image" << std::endl;
+            bitmapRender.setData(backgroundImage);
+            break;
+        case 5:
+            std::cout << "Bitmap Mode: Edges" << std::endl;
+            bitmapRender.setData(backgroundEdges);
             break;
     }
 }
@@ -222,6 +244,30 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_M && action == GLFW_PRESS) {
         changeBitmap(-1);
+    }
+    if (key == GLFW_KEY_E && action == GLFW_PRESS) {
+        if (!edgesRendered) {
+            cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
+            edgesRendered = true;
+        }
+
+        if (sBmap != 5) {
+            // bitmapRender.setData(backgroundEdges);
+            changeBitmap(5);
+
+            handles = false;
+            sBezier = false;
+            sColor = false;
+            sGauss = false;
+        } else if (sBmap == 5) {
+            // bitmapRender.setData(backgroundImage);
+            changeBitmap(4);
+
+            handles = false;
+            sBezier = true;
+            sColor = false;
+            sGauss = false;
+        }
     }
     if (key == GLFW_KEY_J && action == GLFW_PRESS) {
         solve_gaussian(bezier, gaussianCurve, width, height, blurImage);
@@ -264,15 +310,14 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-        cv::Mat image = bitmapRender.getData();
-
-        GaussianStack stack(image);
-        EdgeStack edges(stack, 80, 200);
+        GaussianStack stack(backgroundImage);
+        EdgeStack edges(stack, cannyLowerThreshold, cannyUpperThreshold);
 
         std::vector<PixelChain> chains;
         traceEdgePixels(chains, edges.layer(0), 5);
 
         const int nChains = chains.size();
+        std::cout << nChains << " chains detected" << std::endl;
 
         std::vector<std::vector<Point>> polylines;
         for (int i = 0; i < nChains; i++) {
@@ -284,24 +329,87 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         }
         bezier.load_polyline(polylines, 3);
 
+        changeBitmap(4);
+
         sBezier = true;
         sColor = false;
         sGauss = false;
     }
 
-    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_S && action == GLFW_PRESS) {
         cv::Mat image = bitmapRender.getData();
 
         cv::Mat imageLAB;
         cv::cvtColor(image, imageLAB, cv::COLOR_BGR2Lab);
 
-//        for (int c = 0; c < beziers.size(); c++) {
-//            sampleBezierColours(*beziers.at(c), *colorCurves.at(c), image, imageLAB, 0.1);
-//        }
         sampleBezierColours(bezier, colorCurve, image, imageLAB, 0.1);
 
         sBezier = false;
         sColor = true;
+        sGauss = false;
+    }
+
+    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        int leftShiftState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+        int rightShiftState = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
+
+        if (leftShiftState || rightShiftState) {
+            // Increase sampling density by a constant until it reaches maximum.
+            samplingDensity = std::min(samplingDensity + 0.05, 1.0);
+            std::cout << "Incresing sampling density to " << samplingDensity << std::endl;
+        }
+        else {
+            // Decrease Canny threshold by a multiplier until it reaches minimum.
+            samplingDensity = std::max(samplingDensity - 0.05, 0.05);
+            std::cout << "Decresing sampling density to " << samplingDensity << std::endl;
+        }
+    }
+
+    if (key == GLFW_KEY_U && action == GLFW_PRESS) {
+        int leftShiftState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+        int rightShiftState = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
+
+        if (leftShiftState || rightShiftState) {
+            // Increase Canny threshold by a multiplier until it reaches maximum.
+            cannyUpperThreshold = std::min(cannyUpperThreshold * 1.2, 100000.0);
+            std::cout << "Incresing upper Canny threshold to " << cannyUpperThreshold << std::endl;
+        } else {
+            // Decrease Canny threshold by a multiplier until it reaches minimum.
+            cannyUpperThreshold = std::max(cannyUpperThreshold / 1.2, 2.0);
+            std::cout << "Decreasing upper Canny threshold to " << cannyUpperThreshold << std::endl;
+        }
+
+        cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
+
+        changeBitmap(5);
+
+        handles = false;
+        sBezier = false;
+        sColor = false;
+        sGauss = false;
+    }
+
+    if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+        int leftShiftState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+        int rightShiftState = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
+
+        if (leftShiftState || rightShiftState) {
+            // Increase Canny threshold by a multiplier until it reaches maximum.
+            cannyLowerThreshold = std::min(cannyLowerThreshold * 1.1, 100000.0);
+            std::cout << "Increasing lower Canny threshold to " << cannyLowerThreshold << std::endl;
+        } else {
+            // Decrease Canny threshold by a multiplier until it reaches minimum.
+            cannyLowerThreshold = std::max(cannyLowerThreshold / 1.1, 2.0);
+            std::cout << "Decreasing lower Canny threshold to " << cannyLowerThreshold << std::endl;
+        }
+
+        cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
+
+        changeBitmap(5);
+
+        handles = false;
+        sBezier = false;
+        sColor = false;
         sGauss = false;
     }
 }
