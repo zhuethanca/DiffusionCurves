@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <Eigen/Eigen>
 #include <iostream>
-#include "fd_grad.h"
+#include "diffusion/fd_grad.h"
 #include "igl/min_quad_with_fixed.h"
 #include "Eigen/SparseCholesky"
 

@@ -74,3 +74,40 @@ void BitmapRender::setGaussData(Eigen::MatrixXd &data, size_t width, size_t heig
         }
     }
 }
+
+
+void BitmapRender::setData(cv::Mat &data) {
+    const int width = data.cols;
+    const int height = data.rows;
+
+    this->data.clear();
+    this->data.resize(width * height * 3, 0xFF);
+    this->width = width;
+    this->height = height;
+
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            this->data[((height - y - 1) * width + x) * 3 + 0] = (ubyte)(data.at<cv::Vec3b>(y, x)(2)) & 0xFF;
+            this->data[((height - y - 1) * width + x) * 3 + 1] = (ubyte)(data.at<cv::Vec3b>(y, x)(1)) & 0xFF;
+            this->data[((height - y - 1) * width + x) * 3 + 2] = (ubyte)(data.at<cv::Vec3b>(y, x)(0)) & 0xFF;
+        }
+    }
+}
+
+
+cv::Mat BitmapRender::getData() {
+    cv::Mat image(this->height, this->width, CV_8UC3);
+
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            const uchar r = this->data[((height - y - 1) * width + x) * 3 + 0];
+            const uchar g = this->data[((height - y - 1) * width + x) * 3 + 1];
+            const uchar b = this->data[((height - y - 1) * width + x) * 3 + 2];
+
+            cv::Vec3b pixel(b, g, r);
+            image.at<cv::Vec3b>(y, x) = pixel;
+        }
+    }
+
+    return image;
+}

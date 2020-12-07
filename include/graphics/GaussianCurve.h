@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Bezier.h"
-#include "Util.h"
+#include "util/util.h"
 #include <map>
 #include <cmath>
 #include <random>
@@ -20,8 +20,6 @@ public:
     explicit GaussianCurve(Bezier& bezier);
     void render();
     void renderHandles();
-    void renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height);
-    void renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height);
     void update(GLFWwindow *window);
 
 private:

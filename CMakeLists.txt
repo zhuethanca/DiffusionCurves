@@ -11,7 +11,7 @@ option(LIBIGL_WITH_OPENGL_GLFW       "Use GLFW"           ON)
 
 find_package(LIBIGL REQUIRED)
 
-find_package( OpenCV REQUIRED )
+find_package( OpenCV )
 if (OpenCV_FOUND)
   include_directories(${OpenCV_INCLUDE_DIRS})
 endif()

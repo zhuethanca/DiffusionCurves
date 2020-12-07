@@ -4,30 +4,13 @@
 #include <map>
 #include <cmath>
 #include <random>
-#include "Util.h"
+#include "util/util.h"
+#include "util/argb.h"
 
 #define C_HANDLE_SIZE 10
 #define C_SELECTION_RADIUS 10
 #define C_SELECT_THK 2
 #define C_BORDER_THK 2
-
-struct ARGB {
-    ubyte b;
-    ubyte g;
-    ubyte r;
-    ubyte a;
-};
-
-union ARGBInt {
-    uint32_t asInt;
-    ARGB asARGB;
-
-    explicit ARGBInt(int i);
-
-    ARGBInt(ubyte a, ubyte r, ubyte g, ubyte b);
-
-    ARGBInt(double a, double r, double g, double b);
-};
 
 class ColorCurve {
 public:
@@ -44,8 +27,6 @@ public:
 
     void render();
     void renderHandles();
-    void renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height);
-    void renderNormToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height);
     void update(GLFWwindow *window);
 
 private:
