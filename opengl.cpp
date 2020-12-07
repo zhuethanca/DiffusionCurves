@@ -14,6 +14,7 @@
 #include "graphics/SolveWrappers.h"
 
 #include "diffusion/apply_blur.h"
+#include "diffusion/interpolate_control.h"
 
 #include <reconstruction/GaussianStack.h>
 #include <reconstruction/EdgeStack.h>
@@ -26,6 +27,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <iomanip>
 
 
 int width = WIDTH;
@@ -195,6 +197,8 @@ void changeBitmap(int to) {
     }
 }
 
+double extract(double v);
+
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
         handles = !(handles);
@@ -308,11 +312,118 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         std::cout << "samples=[" << std::endl;
         for (auto & handle : bezier.samples) {
             std::cout << "(" <<
-            (2.0*handle.x/WIDTH-1.0) * 7.5
-            << ", " <<
-            -(2.0*handle.y/HEIGHT-1.0) * 4
-            << ", 0)," << std::endl;
+                      (2.0*handle.x/WIDTH-1.0) * 7.5
+                      << ", " <<
+                      -(2.0*handle.y/HEIGHT-1.0) * 4
+                      << ", 0)," << std::endl;
+        }
+        std::cout << "]" << std::endl << std::endl;
+        std::cout << "samples=[" << std::endl;
+        for (auto & handle : bezier.samples) {
+            std::cout << "(" <<
+                      (2.0*handle.x/WIDTH-1.0) * 7.5
+                      << ", " <<
+                      -(2.0*handle.y/HEIGHT-1.0) * 4
+                      << ", 0)," << std::endl;
         }
         std::cout << "]" << std::endl;
+        std::cout << "pOffSamples=[" << std::endl;
+        for (auto & handle : bezier.pOffset) {
+            std::cout << "(" <<
+                      (2.0*handle.x/WIDTH-1.0) * 7.5
+                      << ", " <<
+                      -(2.0*handle.y/HEIGHT-1.0) * 4
+                      << ", 0)," << std::endl;
+        }
+        std::cout << "]" << std::endl << std::endl;
+        std::cout << "nOffSamples=[" << std::endl;
+        for (auto & handle : bezier.nOffset) {
+            std::cout << "(" <<
+                      (2.0*handle.x/WIDTH-1.0) * 7.5
+                      << ", " <<
+                      -(2.0*handle.y/HEIGHT-1.0) * 4
+                      << ", 0)," << std::endl;
+        }
+        std::cout << "]" << std::endl;
+        std::cout << "pColors=[" << std::endl;
+        std::vector<double> r, g, b;
+        interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractRed, r);
+        interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractGreen, g);
+        interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractBlue, b);
+        for (int i = 0; i < r.size(); i ++) {
+            ubyte rv = ((ubyte) (r.at(i)*255)) & 0xFF;
+            ubyte gv = ((ubyte) (g.at(i)*255)) & 0xFF;
+            ubyte bv = ((ubyte) (b.at(i)*255)) & 0xFF;
+            int rgb = (rv << 16) | (gv << 8) | bv;
+            std::cout << "\"#" << std::setfill('0') << std::setw(6) << std::hex << rgb << "\", " << std::endl;
+        }
+        std::cout << "]" << std::endl;
+        std::cout << "nColors=[" << std::endl;
+        r.clear();
+        g.clear();
+        b.clear();
+        interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractRed, r);
+        interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractGreen, g);
+        interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractBlue, b);
+        for (int i = 0; i < r.size(); i ++) {
+            ubyte rv = ((ubyte) (r.at(i)*255)) & 0xFF;
+            ubyte gv = ((ubyte) (g.at(i)*255)) & 0xFF;
+            ubyte bv = ((ubyte) (b.at(i)*255)) & 0xFF;
+            int rgb = (rv << 16) | (gv << 8) | bv;
+            std::cout << "\"#" << std::setfill('0') << std::setw(6) << std::hex << rgb << "\", " << std::endl;
+        }
+        std::cout << "]" << std::endl;
+        std::cout << "blurColors=[" << std::endl;
+        b.clear();
+        interpolate_control(bezier.samples, gaussianCurve.curve.controlToIndex(gaussianCurve.control), extract, b);
+        double max = 0;
+        for (int i = 0; i < b.size(); i ++) {
+            max = MAX(max, b.at(i));
+        }
+        max -= 0.6;
+        for (int i = 0; i < b.size(); i ++) {
+            ubyte bv = ((ubyte) (((b.at(i)-0.6)/max)*255)) & 0xFF;
+            int rgb = (bv << 16) | (bv << 8) | bv;
+            std::cout << "\"#" << std::setfill('0') << std::setw(6) << std::hex << rgb << "\", " << std::endl;
+        }
+        std::cout << "]" << std::endl;
+        std::cout << "pHandles={" << std::endl;
+        for (auto &handle : colorCurve.pCurve.controlToIndex(colorCurve.pControl)) {
+            Point &p = bezier.pOffset.at(handle.first);
+            std::cout << "(" <<
+                      (2.0*p.x/WIDTH-1.0) * 7.5
+                      << ", " <<
+                      -(2.0*p.y/HEIGHT-1.0) * 4
+                      << "): "
+                      << "\"#" << std::setfill('0') << std::setw(6)
+                      << std::hex << (handle.second.asInt & 0xFFFFFF) << "\", " << std::endl;
+        }
+        std::cout << "}" << std::endl;
+        std::cout << "nHandles={" << std::endl;
+        for (auto &handle : colorCurve.nCurve.controlToIndex(colorCurve.nControl)) {
+            Point &p = bezier.nOffset.at(handle.first);
+            std::cout << "(" <<
+                      (2.0*p.x/WIDTH-1.0) * 7.5
+                      << ", " <<
+                      -(2.0*p.y/HEIGHT-1.0) * 4
+                      << "): "
+                      << "\"#" << std::setfill('0') << std::setw(6)
+                      << std::hex << (handle.second.asInt & 0xFFFFFF) << "\", " << std::endl;
+        }
+        std::cout << "}" << std::endl;
+        std::cout << "bHandles={" << std::endl;
+        for (auto &handle : gaussianCurve.curve.controlToIndex(gaussianCurve.control)) {
+            Point &p = bezier.samples.at(handle.first);
+            ubyte bv = ((ubyte) (((handle.second-0.6)/max) *255)) & 0xFF;
+            int blur = (bv << 16) | (bv << 8) | bv;
+            std::cout << "(" <<
+                      (2.0*p.x/WIDTH-1.0) * 7.5
+                      << ", " <<
+                      -(2.0*p.y/HEIGHT-1.0) * 4
+                      << "): "
+                      << "\"#" << std::setfill('0') << std::setw(6)
+                      << std::hex << blur << "\", " << std::endl;
+        }
+        std::cout << "}" << std::endl;
     }
 }

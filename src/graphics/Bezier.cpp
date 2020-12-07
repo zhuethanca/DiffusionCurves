@@ -18,7 +18,6 @@ Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
     handles.emplace_back(WIDTH * (639/1024.0), HEIGHT * (528/768.0));
     handles.emplace_back(WIDTH * (798/1024.0), HEIGHT * (531/768.0));
     updateBezier();
-    */
 }
 
 void Bezier::load_polyline(std::vector<std::vector<Point>> polylines, double offsetDist, double tension) {
