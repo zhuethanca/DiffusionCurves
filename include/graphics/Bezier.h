@@ -12,16 +12,16 @@
 #define SELECTION_RADIUS 20
 #define SELECT_THK 2
 
-#define DISTANCE_TOLERANCE 0.25
-
 class Bezier {
 public:
     Bezier(double offset_dist);
 
-    Bezier(std::vector<Point> polyline, double offsetDist, double tension = 2.0);
+    void load_polyline(std::vector<std::vector<Point>> polylines, double offsetDist, double tension = 2.0);
 
     std::vector<int> segments;
     std::set<int> voidSegments;
+    std::vector<size_t> curveSegment;
+
     std::vector<Point> samples;
     std::vector<Point> norms;
     std::vector<Point> nOffset;
@@ -32,6 +32,7 @@ public:
     void update(GLFWwindow* window);
     void renderCurve();
     void renderHandles();
+    size_t getCurveSegment(size_t curveIndex);
 
 private:
     double offset_dist;
@@ -47,8 +48,5 @@ private:
     void onDrag(double x, double y);
 
     void updateBezier();
-    static void subdivideBezier(double x1, double y1, double x2, double y2,
-                                double x3, double y3, double x4, double y4,
-                                std::vector<Point>& samples, std::vector<Point>& norms);
 };
 

@@ -6,12 +6,13 @@
 #include "../../opengl.h"
 #include <iostream>
 #include <cmath>
-#include <graphics/Util.h>
+#include <util/util.h>
+#include "diffusion/subdivide_bezier.h"
 
 Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
     /*
     Handles for project demo.
-
+    */
     handles.emplace_back(227, 533);
     handles.emplace_back(440, 531);
     handles.emplace_back(296, 238);
@@ -20,64 +21,65 @@ Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
     handles.emplace_back(639, 528);
     handles.emplace_back(798, 531);
     updateBezier();
-    */
 }
 
-Bezier::Bezier(std::vector<Point> polyline, double offsetDist, double tension) {
+void Bezier::load_polyline(std::vector<std::vector<Point>> polylines, double offsetDist, double tension) {
     this->offset_dist = offsetDist;
+    this->handles.clear();
+    for (auto &polyline : polylines) {
+        const int nPoints = polyline.size();
+        Eigen::Vector2f first = polyline.at(0).toVector();
+        Eigen::Vector2f second = polyline.at(1).toVector();
+        Eigen::Vector2f secondLast = polyline.at(nPoints - 2).toVector();
+        Eigen::Vector2f last = polyline.at(nPoints - 1).toVector();
 
-    const int nPoints = polyline.size();
-    Eigen::Vector2f first = polyline.at(0).toVector();
-    Eigen::Vector2f second = polyline.at(1).toVector();
-    Eigen::Vector2f secondLast = polyline.at(nPoints - 2).toVector();
-    Eigen::Vector2f last = polyline.at(nPoints - 1).toVector();
+        Eigen::MatrixXf derivatives(2, nPoints);
+        derivatives.col(0) = (second - first) / tension;
+        derivatives.col(nPoints - 1) = (last - secondLast) / tension;
 
-    Eigen::MatrixXf derivatives(2, nPoints);
-    derivatives.col(0) = (second - first) / tension;
-    derivatives.col(nPoints - 1) = (last - secondLast) / tension;
+        for (int i = 1; i < polyline.size() - 1; i++) {
+            Eigen::Vector2f next = polyline.at(i + 1).toVector();
+            Eigen::Vector2f prev = polyline.at(i - 1).toVector();
 
-    for (int i = 1; i < polyline.size() - 1; i++) {
-        Eigen::Vector2f next = polyline.at(i + 1).toVector();
-        Eigen::Vector2f prev = polyline.at(i - 1).toVector();
+            derivatives.col(i) = (next - prev) / tension;
+        }
 
-        derivatives.col(i) = (next - prev) / tension;
+        Eigen::Vector2f firstDerivative = derivatives.col(0);
+        Eigen::Vector2f firstControl = first + firstDerivative / 3.0;
+
+        Point firstHandle = polyline.at(0);
+        Point firstControlHandle(firstControl(0), firstControl(1));
+
+        this->handles.push_back(firstHandle);
+        this->handles.push_back(firstControlHandle);
+
+        for (int i = 1; i < nPoints - 1; i++) {
+            Eigen::Vector2f curr = polyline.at(i).toVector();
+            Eigen::Vector2f currDerivative = derivatives.col(i);
+
+            Eigen::Vector2f prevControl = curr - currDerivative / 3.0;
+            Eigen::Vector2f nextControl = curr + currDerivative / 3.0;
+
+            Point currHandle = polyline.at(i);
+            Point prevControlHandle(prevControl(0), prevControl(1));
+            Point nextControlHandle(nextControl(0), nextControl(1));
+
+            this->handles.push_back(prevControlHandle);
+            this->handles.push_back(currHandle);
+            this->handles.push_back(nextControlHandle);
+        }
+
+        Eigen::Vector2f lastDerivative = derivatives.col(nPoints - 1);
+        Eigen::Vector2f lastControl = last + lastDerivative / 3.0;
+
+        Point lastHandle = polyline.at(nPoints - 1);
+        Point lastControlHandle(lastControl(0), lastControl(1));
+
+        this->handles.push_back(lastControlHandle);
+        this->handles.push_back(lastHandle);
+
+        handles.emplace_back(INFINITY, INFINITY);
     }
-
-    Eigen::Vector2f firstDerivative = derivatives.col(0);
-    Eigen::Vector2f firstControl = first + firstDerivative / 3.0;
-
-    Point firstHandle = polyline.at(0);
-    Point firstControlHandle(firstControl(0), firstControl(1));
-
-    this->handles.push_back(firstHandle);
-    this->handles.push_back(firstControlHandle);
-
-    for (int i = 1; i < nPoints - 1; i++) {
-        Eigen::Vector2f curr = polyline.at(i).toVector();
-        Eigen::Vector2f currDerivative = derivatives.col(i);
-
-        Eigen::Vector2f prevControl = curr - currDerivative / 3.0;
-        Eigen::Vector2f nextControl = curr + currDerivative / 3.0;
-
-        Point currHandle = polyline.at(i);
-        Point prevControlHandle(prevControl(0), prevControl(1));
-        Point nextControlHandle(nextControl(0), nextControl(1));
-
-        this->handles.push_back(prevControlHandle);
-        this->handles.push_back(currHandle);
-        this->handles.push_back(nextControlHandle);
-    }
-
-    Eigen::Vector2f lastDerivative = derivatives.col(nPoints - 1);
-    Eigen::Vector2f lastControl = last + lastDerivative / 3.0;
-
-    Point lastHandle = polyline.at(nPoints - 1);
-    Point lastControlHandle(lastControl(0), lastControl(1));
-
-    this->handles.push_back(lastControlHandle);
-    this->handles.push_back(lastHandle);
-
-    handles.emplace_back(INFINITY, INFINITY);
     this->updateBezier();
 }
 
@@ -196,6 +198,10 @@ void Bezier::renderHandles() {
     }glEnd();
 }
 
+size_t Bezier::getCurveSegment(size_t curveIndex) {
+    return curveSegment.at(curveIndex);
+}
+
 void Bezier::renderCurve() {
     this->curve.render();
 }
@@ -204,6 +210,7 @@ void Bezier::updateBezier() {
     samples.clear();
     norms.clear();
     segments.clear();
+    curveSegment.clear();
     if (handles.size() < 4)
         return;
     segments.push_back(samples.size());
@@ -212,6 +219,7 @@ void Bezier::updateBezier() {
 
     samples.emplace_back(first);
     norms.emplace_back(0, 0);
+    curveSegment.emplace_back(0);
 
     for (int i = 0; i+3 < handles.size(); i += 3) {
         bool ctn = false;
@@ -224,6 +232,7 @@ void Bezier::updateBezier() {
                     voidSegments.emplace(segments.size()-1);
                     samples.emplace_back(handles.at(i).x, handles.at(i).y);
                     norms.emplace_back(0, 0);
+                    curveSegment.emplace_back(segments.size());
                     ctn = true;
                 }
             }
@@ -254,55 +263,4 @@ void Bezier::updateBezier() {
 
     curve.offset(norms, offset_dist, pOffset);
     curve.offset(norms, -offset_dist, nOffset);
-}
-
-/**
- * Adapted From http://www.antigrain.com/research/adaptive_bezier/index.html
- *
- * That site is not up anymore, here is the WayBackMachine Link
- *
- * https://web.archive.org/web/20120621023536/http://www.antigrain.com/research/adaptive_bezier/index.html
- */
-void Bezier::subdivideBezier(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4,
-                             std::vector<Point>& samples, std::vector<Point>& norms) {
-    // Calculate all the mid-points of the line segments
-    //----------------------
-    double x12   = (x1 + x2) / 2;
-    double y12   = (y1 + y2) / 2;
-    double x23   = (x2 + x3) / 2;
-    double y23   = (y2 + y3) / 2;
-    double x34   = (x3 + x4) / 2;
-    double y34   = (y3 + y4) / 2;
-    double x123  = (x12 + x23) / 2;
-    double y123  = (y12 + y23) / 2;
-    double x234  = (x23 + x34) / 2;
-    double y234  = (y23 + y34) / 2;
-    double x1234 = (x123 + x234) / 2;
-    double y1234 = (y123 + y234) / 2;
-
-    // Try to approximate the full cubic curve by a single straight line
-    //------------------
-    double dx = x4-x1;
-    double dy = y4-y1;
-
-    double d2 = fabs(((x2 - x4) * dy - (y2 - y4) * dx));
-    double d3 = fabs(((x3 - x4) * dy - (y3 - y4) * dx));
-
-    if((d2 + d3)*(d2 + d3) < DISTANCE_TOLERANCE * (dx*dx + dy*dy))
-    {
-        samples.emplace_back(x1234, y1234);
-        norms.emplace_back(y234-y1234, x1234-x234);
-        Point& norm = (*norms.rbegin());
-        if (abs(norm.x) < 1E-4 && abs(norm.y) < 1E-4) {
-            norm.x = (y2-y1);
-            norm.y = (x1-x2);
-        }
-        norm.normalize();
-        return;
-    }
-
-    // Continue subdivision
-    //----------------------
-    subdivideBezier(x1, y1, x12, y12, x123, y123, x1234, y1234, samples, norms);
-    subdivideBezier(x1234, y1234, x234, y234, x34, y34, x4, y4, samples, norms);
 }

@@ -3,6 +3,8 @@
 //
 
 #include "graphics/GaussianCurve.h"
+#include "diffusion/rasterize_samples.h"
+#include "diffusion/interpolate_control.h"
 #include <map>
 
 GaussianCurve::GaussianCurve(Bezier &bezier) : bezier(bezier),
@@ -64,7 +66,7 @@ void GaussianCurve::render() {
             mx = MAX(mx, ctrl.second);
         }
         std::vector<double> b;
-        curve.interp(control, extract, b);
+        interpolate_control(bezier.samples, curve.controlToIndex(control), extract, b);
         if (mx != 0) {
             for (int i = 0; i < b.size(); i ++) {
                 b.at(i) /= mx;
@@ -115,7 +117,7 @@ void GaussianCurve::onClick(double x, double y) {
     if (d1 < G_SELECTION_RADIUS * G_SELECTION_RADIUS) {
         if (!shift) {
             std::vector<double> b;
-            curve.interp(control, extract, b);
+            interpolate_control(bezier.samples, curve.controlToIndex(control), extract, b);
             size_t index = curve.atIndex(closest.second);
             control.emplace(closest.second, b.at(index));
         } else {
@@ -169,25 +171,4 @@ void GaussianCurve::selectSigma() {
 
 double gaussdup(const std::vector<double> &dups) {
     return -1;
-}
-
-void GaussianCurve::renderToMatrix(Eigen::SparseMatrix<double> &data, size_t width, size_t height) {
-    data.resize(width * height, 1);
-    std::map<int, std::vector<double>> dups;
-    std::vector<Tripletd> matList;
-    std::set<int> intersections;
-    {
-        std::vector<double> b;
-        curve.interp(control, extract, b);
-        curve.renderToArray(b, width, height, index, 0, dups, matList, width * height, intersections);
-    }
-    dups.clear();
-
-    Curve::finalizeArrayRender(data, gaussdup, width, height, dups, matList, width * height, [](const int& row, const int& col, const double & value){
-        return 0 <= value;
-    });
-}
-
-double extract(double v) {
-    return MAX(v, 0);
 }
