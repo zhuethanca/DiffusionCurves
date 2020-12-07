@@ -27,7 +27,7 @@ public:
     std::vector<Point> nOffset;
     std::vector<Point> pOffset;
     std::vector<Point> handles;
-    Point* selected = NULL;
+    int selectedIndex;
 
     void update(GLFWwindow* window);
     void renderCurve();
