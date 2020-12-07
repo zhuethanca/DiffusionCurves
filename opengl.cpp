@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
 
 void changeBitmap(int to) {
     if (to == -1)
-        sBmap = (sBmap+1)%4;
+        sBmap = (sBmap+1)%6;
     else
         sBmap = to % 6;
     switch (sBmap) {
@@ -337,6 +337,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 
     if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+        std::cout << "Sampling..." << std::endl;
         cv::Mat image = bitmapRender.getData();
 
         cv::Mat imageLAB;

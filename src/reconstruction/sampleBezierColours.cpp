@@ -43,6 +43,7 @@ void sampleBezierColours(Bezier &curve,
             else
                 handles.push_back(curve.handles.at(handlesIndex));
         }
+        std::cout << "\rSampling Curve " << curveIndex << "/" << curve.curveSegment.size() << std::flush;
         const int nCurves = handles.size() / 3;  // Integer division to round down.
         if (nCurves <= 0)
             continue;
@@ -130,6 +131,7 @@ void sampleBezierColours(Bezier &curve,
             Eigen::Vector2f pNormal = rotation * tangent;
             Eigen::Vector2f nNormal = -pNormal;
 
+            int trials = 0;
             if (pColours.size() < nSamples) {
                 // Look for a new "positive" colour sample at this point.
                 cv::Vec3b *pColour = sampleAlongNormal(image, imageLab, point, pNormal);
@@ -138,9 +140,14 @@ void sampleBezierColours(Bezier &curve,
                     // Colour sample is valid.
                     pPositions.push_back(curveId + curvePercent);
                     pColours.push_back(*pColour);
+                    trials = 0;
+                } else {
+                    trials ++;
+                    if (trials > 50)
+                        break;
                 }
             }
-
+            trials = 0;
             if (nColours.size() < nSamples) {
                 // Look for a new "negative" colour sample at this point.
                 cv::Vec3b *nColour = sampleAlongNormal(image, imageLab, point, nNormal);
@@ -149,6 +156,11 @@ void sampleBezierColours(Bezier &curve,
                     // Colour sample is valid.
                     nPositions.push_back(curveId + curvePercent);
                     nColours.push_back(*nColour);
+                    trials = 0;
+                } else {
+                    trials ++;
+                    if (trials > 50)
+                        break;
                 }
             }
         }
@@ -171,4 +183,5 @@ void sampleBezierColours(Bezier &curve,
             colours.nControl.emplace(curve.getCurveSegment(curveIndex) + position, colourARGB);
         }
     }
+    std::cout << "\rSampling Curve " << curve.curveSegment.size() << "/" << curve.curveSegment.size() << std::endl;
 }

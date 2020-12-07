@@ -78,8 +78,12 @@ void rasterize_color(std::vector<int> &segments, std::set<int> &voidSegments,
     for (const auto& pair : dups) {
         matList.emplace_back(pair.first, pair.second, -1);
     }
+    std::vector<Tripletd> cleanMatList(matList.size());
+    std::copy_if (matList.begin(), matList.end(), std::back_inserter(cleanMatList), [width, height](Tripletd d){
+        return 0 <= d.row() && d.row() < width*height && 0 <= d.col() && d.col() < 3;
+    } );
 
-    data.setFromTriplets(matList.begin(), matList.end(), [] (const double &,const double &b) { return b; });
+    data.setFromTriplets(cleanMatList.begin(), cleanMatList.end(), [] (const double &,const double &b) { return b; });
 
     data.prune([](const int& row, const int& col, const double & value){
         return 0 <= value && value <= 1;

@@ -18,7 +18,12 @@ void rasterize_gaussian(std::vector<Point> &samples, std::vector<Point> &norms,
                           b, width, height, index, 0, matList);
     }
 
-    data.setFromTriplets(matList.begin(), matList.end(), [] (const double &,const double &b) { return b; });
+    std::vector<Tripletd> cleanMatList(matList.size());
+    std::copy_if (matList.begin(), matList.end(), std::back_inserter(cleanMatList), [width, height](Tripletd d){
+        return 0 <= d.row() && d.row() < width*height && 0 == d.col();
+    } );
+
+    data.setFromTriplets(cleanMatList.begin(), cleanMatList.end(), [] (const double &,const double &b) { return b; });
 
     data.prune([](const int& row, const int& col, const double & value){
         return 0 <= value;

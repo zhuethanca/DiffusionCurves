@@ -31,14 +31,20 @@ void rasterize_norms(std::vector<Point> &samples, std::vector<Point> &norms,
             gdy.emplace_back(norm.y * (pg.at(i) - ng.at(i)));
             bdy.emplace_back(norm.y * (pb.at(i) - nb.at(i)));
         }
-
-        rasterize_samples(samples, segments, voidSegments, rdx, width, height, indexDx, 0, matList);
-        rasterize_samples(samples, segments, voidSegments, gdx, width, height, indexDx, 1, matList);
-        rasterize_samples(samples, segments, voidSegments, bdx, width, height, indexDx, 2, matList);
-        rasterize_samples(samples, segments, voidSegments, rdy, width, height, indexDy, 0, matList);
-        rasterize_samples(samples, segments, voidSegments, gdy, width, height, indexDy, 1, matList);
-        rasterize_samples(samples, segments, voidSegments, bdy, width, height, indexDy, 2, matList);
+        std::vector<Tripletd> tmpMatList;
+        rasterize_samples(samples, segments, voidSegments, rdx, width, height, indexDx, 0, tmpMatList);
+        rasterize_samples(samples, segments, voidSegments, gdx, width, height, indexDx, 1, tmpMatList);
+        rasterize_samples(samples, segments, voidSegments, bdx, width, height, indexDx, 2, tmpMatList);
+        std::copy_if (tmpMatList.begin(), tmpMatList.end(), std::back_inserter(matList), [width, height](Tripletd d){
+            return 0 <= d.row() && d.row() < width*height && 0 <= d.col() && d.col() < 3;
+        } );
+        tmpMatList.clear();
+        rasterize_samples(samples, segments, voidSegments, rdy, width, height, indexDy, 0, tmpMatList);
+        rasterize_samples(samples, segments, voidSegments, gdy, width, height, indexDy, 1, tmpMatList);
+        rasterize_samples(samples, segments, voidSegments, bdy, width, height, indexDy, 2, tmpMatList);
+        std::copy_if (tmpMatList.begin(), tmpMatList.end(), std::back_inserter(matList), [width, height](Tripletd d){
+            return width*height <= d.row() && d.row() < 2*width*height && 0 <= d.col() && d.col() < 3;
+        });
     }
-
     data.setFromTriplets(matList.begin(), matList.end(), [] (const double &,const double &b) { return 0; });
 }
