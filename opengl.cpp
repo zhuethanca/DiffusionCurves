@@ -342,7 +342,7 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         cv::Mat imageLAB;
         cv::cvtColor(image, imageLAB, cv::COLOR_BGR2Lab);
 
-        sampleBezierColours(bezier, colorCurve, image, imageLAB, 0.1);
+        sampleBezierColours(bezier, colorCurve, image, imageLAB, samplingDensity);
 
         sBezier = false;
         sColor = true;
