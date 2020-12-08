@@ -57,6 +57,32 @@ To solve this, we first flatten the 2d rasterized color curve image into a 1d ar
 
 $$C \in \R^{wh \times 3}$$
 
+>
+>### Quick Excerpt on Rasterization
+>
+>Since bezier curves and color gradients are vectorized forms, we must rasterize them into the matrix $C$.
+>
+>For simplicity, we will only allow for the use of cubic bezier curve.
+>
+><p align=center>
+><img src="https://upload.wikimedia.org/wikipedia/commons/d/db/B%C3%A9zier_3_big.gif">
+><p align=center>
+>Animation of a cubic Bézier curve, t in [0,1]. <a href="https://en.wikipedia.org/wiki/File:B%C3%A9zier_3_big.gif"> From Wikipedia. </a>
+>
+>[De Casteljau's algorithm](https://en.wikipedia.org/wiki/De_Casteljau%27s_algorithm) gives us a way of subdividing the bezier curve into two smaller flatter curves of the same order. We can thus keep subdividing the bezier until it is "flat" enough to approximate the segment with a line.
+>
+>Observe that in the gif above, we can easily compute the two end points of the blue line, and the blue line is always tangent to the bezier curve. Thus, we can rotate this line by $90\degree$ to compute the norm to the curve at any point. In practice, we only need to compute it at the two endpoints and every subdivision points.
+>
+>Using these norms we can simply offset all endpoints in our line approximation to obtain our offset curves. 
+>
+>Colors can be simply linearly interpolated on each color channel of the RGB color space to fully color the space.
+>
+>The lines can be simply plotting using any line plotting algorithm.
+>
+>When plotting the color curves, we must clear every point between the two curves as when two curves intersect, the intersection leaves nasty artifacts. This can be done by rendering the two lines as a triangle strip and use a simple stensil test to clear the center. Another simpler method is to construct a quadrilateral for each line segment pair, and run flood fill to fill all interior and front/back points
+> 
+>Norms are plotted on the original line, and can be computed on each end point using the norm and color difference as described above, then linearly interpolated across the line segment.
+
 Similarly we can construct the $W_x \in \R^{wh \times 3}$ and $W_y \in \R^{wh \times 3}$ matricies encoding the $x$ and $y$ components of our color gradient. Stacking these two matricies together yields
 
 $$W = \left(\begin{matrix}
@@ -71,19 +97,19 @@ $$\min_{I} \frac{1}{2}||GI-W||^{2}$$
 where $G^{T}$ is a discrete divergence matrix. We can write this matrix as 
 
 $G = \left(\begin{matrix}
-D_{x}\\
-D_{y}
+D^{x}\\
+D^{y}
 \end{matrix}\right)$,
 
 where
-$$D_{x}^{(x, y), (x', y')} = \begin{cases}
-    1 & x=x' & y=y'\\
-    -1 & x=x'-1 & y=y'\\
+$$D^{x}_{(x, y), (x', y')} = \begin{cases}
+    1 & (x', y') = (x, y)\\
+    -1 & (x', y') = (x-1, y)\\
     0 & \text{otherwise}
 \end{cases}$$
-$$D_{y}^{(x, y), (x', y')} = \begin{cases}
-    1 & x=x' & y=y'\\
-    -1 & x=x' & y=y'-1\\
+$$D^{y}_{(x, y), (x', y')} = \begin{cases}
+    1 & (x', y') = (x, y)\\
+    -1 & (x', y') = (x, y-1)\\
     0 & \text{otherwise}
 \end{cases}$$
 
@@ -121,7 +147,7 @@ Blur Map
 
 ## Final Image
 
-We can apply the final blur using the blur map as the pixel wise kernel size using a gaussian blur to yeild our final blurred image.
+We can now apply the final blur using the blur map as the pixel wise kernel size using a gaussian blur to yeild our final blurred image.
 
 <p align=center>
 <img src="blurred-final.png" alt="drawing" width="500"/>
