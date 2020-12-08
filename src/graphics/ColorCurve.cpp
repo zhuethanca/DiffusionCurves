@@ -72,13 +72,13 @@ void ColorCurve::update(GLFWwindow *window) {
     } else if (rstate == GLFW_RELEASE) {
         rpressed = false;
     }
-    int estate = glfwGetKey(window, GLFW_KEY_E);
-    if (estate == GLFW_PRESS) {
+    int xState = glfwGetKey(window, GLFW_KEY_X);
+    if (xState == GLFW_PRESS) {
         std::cout << "Detected E press" << std::endl;
         selectColor();
-        epressed = true;
-    } else if (estate == GLFW_RELEASE) {
-        epressed = false;
+        xPressed = true;
+    } else if (xState == GLFW_RELEASE) {
+        xPressed = false;
     }
 }
 

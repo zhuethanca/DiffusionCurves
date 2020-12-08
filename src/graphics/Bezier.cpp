@@ -3,21 +3,26 @@
 //
 
 #include "graphics/Bezier.h"
-#include "../../opengl.h"
 #include <iostream>
 #include <cmath>
 #include <util/util.h>
 #include "diffusion/subdivide_bezier.h"
 
 Bezier::Bezier(double offsetDist) : offset_dist(offsetDist) {
-    handles.emplace_back(WIDTH * (227/1024.0), HEIGHT * (533/768.0));
-    handles.emplace_back(WIDTH * (440/1024.0), HEIGHT * (531/768.0));
-    handles.emplace_back(WIDTH * (296/1024.0), HEIGHT * (238/768.0));
-    handles.emplace_back(WIDTH * (521/1024.0), HEIGHT * (237/768.0));
-    handles.emplace_back(WIDTH * (677/1024.0), HEIGHT * (240/768.0));
-    handles.emplace_back(WIDTH * (639/1024.0), HEIGHT * (528/768.0));
-    handles.emplace_back(WIDTH * (798/1024.0), HEIGHT * (531/768.0));
+    /*
+    Handles for project demo.
+
+    handles.emplace_back(227, 533);
+    handles.emplace_back(440, 531);
+    handles.emplace_back(296, 238);
+    handles.emplace_back(521, 237);
+    handles.emplace_back(677, 240);
+    handles.emplace_back(639, 528);
+    handles.emplace_back(798, 531);
     updateBezier();
+    */
+
+    this->selectedIndex = -1;
 }
 
 void Bezier::load_polyline(std::vector<std::vector<Point>> polylines, double offsetDist, double tension) {
@@ -117,18 +122,21 @@ void Bezier::update(GLFWwindow *window) {
 void Bezier::onClick(double x, double y) {
     if (!shift) {
         Point newPoint(x, y);
-        for (Point &p : handles) {
+
+        for (int i = 0; i < handles.size(); i++) {
+            Point& p = handles.at(i);
             if (p.dist(newPoint) < SELECTION_RADIUS) {
-                selected = &p;
+                selectedIndex = i;
                 return;
             }
         }
+
         handles.emplace_back(x, y);
-        selected = &*handles.rbegin();
+        selectedIndex = -1;
         updateBezier();
     } else {
         handles.emplace_back(INFINITY, INFINITY);
-        selected = NULL;
+        selectedIndex = -1;
         updateBezier();
     }
 }
@@ -144,15 +152,35 @@ void Bezier::onRightClick(double x, double y) {
     }
     if (i != handles.end() && i+1 == handles.end()) {
         handles.erase(i);
-        selected = NULL;
+        selectedIndex = -1;
     }
     updateBezier();
 }
 
 void Bezier::onDrag(double x, double y) {
-    if (selected != NULL) {
-        selected->x = x;
-        selected->y = y;
+    if (selectedIndex != -1) {
+        Point &selected = this->handles.at(selectedIndex);
+        const double dx = x - selected.x;
+        const double dy = y - selected.y;
+
+        selected.x = x;
+        selected.y = y;
+
+        // Check if this handle is a spatial anchor instead of a curve control.
+        bool isShapeHandle = selectedIndex % 3 == 0;
+
+        // Move the preceding curve control point along with the handle.
+        if (isShapeHandle && selectedIndex > 0) {
+            Point &prevHandle = this->handles.at(selectedIndex - 1);
+            prevHandle.x += dx;
+            prevHandle.y += dy;
+        }
+        // Move the following curve control point along with the handle.
+        if (isShapeHandle && selectedIndex < this->handles.size() - 1) {
+            Point &nextHandle = this->handles.at(selectedIndex + 1);
+            nextHandle.x += dx;
+            nextHandle.y += dy;
+        }
     }
     updateBezier();
 }
@@ -164,9 +192,11 @@ void Bezier::renderHandles() {
             drawCenteredRect(p.x, p.y, HANDLE_SIZE, HANDLE_SIZE);
         }
 
-        if (selected != nullptr) {
+        if (selectedIndex != -1) {
             glColor3f(1, 1, 1);
-            drawCenteredRect(selected->x, selected->y, HANDLE_SIZE - SELECT_THK, HANDLE_SIZE - SELECT_THK);
+
+            Point selected = this->handles.at(selectedIndex);
+            drawCenteredRect(selected.x, selected.y, HANDLE_SIZE - SELECT_THK, HANDLE_SIZE - SELECT_THK);
         }
     }glEnd();
     glBegin(GL_LINES);{

@@ -43,6 +43,7 @@ void sampleBezierColours(Bezier &curve,
             else
                 handles.push_back(curve.handles.at(handlesIndex));
         }
+        std::cout << "\rSampling Curve " << curveIndex << "/" << curve.curveSegment.size() << std::flush;
         const int nCurves = handles.size() / 3;  // Integer division to round down.
         if (nCurves <= 0)
             continue;
@@ -65,6 +66,11 @@ void sampleBezierColours(Bezier &curve,
             cumulativeLengths(c) = totalCurveLength;
         }
 
+        if (totalCurveLength <= 2) {
+            curve.voidSegments.insert(curve.getCurveSegment(curveIndex));
+            continue;
+        }
+
         // Take a number of samples proportinal to the total length of the curve.
         const int nSamples = std::ceil(totalCurveLength * sampleDensity);
         std::uniform_real_distribution<double> distribution(0.0, totalCurveLength);
@@ -85,8 +91,8 @@ void sampleBezierColours(Bezier &curve,
 
         // Continue to sample more random points until enough have been found or
         // all have been tried.
-        while ((pColours.size() < nSamples || nColours.size() < nSamples)
-               && visited.size() < totalCurveLength) {
+        for (int trials = 0; trials < 50 && (pColours.size() < nSamples || nColours.size() < nSamples)
+               && visited.size() < totalCurveLength; trials ++) {
 
             // Generate a random position along the curve.
             double samplePosition = distribution(rng);
@@ -171,4 +177,5 @@ void sampleBezierColours(Bezier &curve,
             colours.nControl.emplace(curve.getCurveSegment(curveIndex) + position, colourARGB);
         }
     }
+    std::cout << "\rSampling Curve " << curve.curveSegment.size() << "/" << curve.curveSegment.size() << std::endl;
 }

@@ -2,7 +2,7 @@
 // Created by Ethan on 11/23/2020.
 //
 
-#include "opengl.h"
+#include "main.h"
 // Include standard headers
 #include <cstdio>
 #include <cstdlib>
@@ -14,7 +14,6 @@
 #include "graphics/SolveWrappers.h"
 
 #include "diffusion/apply_blur.h"
-#include "diffusion/interpolate_control.h"
 
 #include <reconstruction/GaussianStack.h>
 #include <reconstruction/EdgeStack.h>
@@ -27,7 +26,6 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <iomanip>
 
 
 int width = WIDTH;
@@ -50,11 +48,17 @@ Eigen::MatrixXd rgbImage;
 Eigen::MatrixXd blurImage;
 Eigen::MatrixXd finalImage;
 cv::Mat backgroundImage;
+cv::Mat backgroundEdges;
 
 bool rgbRendered = false;
 bool blurRendered = false;
 bool finalRendered = false;
 bool imageRendered = false;
+bool edgesRendered = false;
+
+double cannyUpperThreshold = 200;
+double cannyLowerThreshold = 80;
+double samplingDensity = 0.1;
 
 
 int main(int argc, char** argv) {
@@ -64,6 +68,8 @@ int main(int argc, char** argv) {
     if (argc >= 2) {
         char* filepath = argv[1];
         backgroundImage = cv::imread(argv[1]);
+
+        cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
 
         width = backgroundImage.cols;
         height = backgroundImage.rows;
@@ -98,13 +104,18 @@ int main(int argc, char** argv) {
     B,b      Show/Hide Bezier Curve
     C,c      Show/Hide Color Curves
     G,g      Show/Hide Gaussian Blur Curves
-    J,j      Render Gaussian Blur Map
-    E,e      Enter Color/Sigma
-    R,r      Render
-
+    E,e      View Background Edges
     M,m      Change Bitmap Mode
+    J,j      Render Gaussian Blur Map
+    X,x      Enter Color/Sigma
+    R,r      Render Sharp Color Image
+    W,w      Apply Blur Map To Color Image
 
     A,a      Auto-generate Curves from Image
+    S,s      Sample Colours from Image
+    D,d      Raise/Lower Colour Sampling Density
+    U,u      Raise/Lower Upper Canny Threshold
+    L,l      Raise/Lower Lower Canny Threshold
 )";
 
     while (!glfwWindowShouldClose(window)) {
@@ -126,6 +137,8 @@ int main(int argc, char** argv) {
             if (sBmap == 3 && finalRendered)
                 bitmapRender.render();
             if (sBmap == 4 && imageRendered)
+                bitmapRender.render();
+            if (sBmap == 5 && edgesRendered)
                 bitmapRender.render();
         }
         if (sBezier) {
@@ -172,9 +185,9 @@ int main(int argc, char** argv) {
 
 void changeBitmap(int to) {
     if (to == -1)
-        sBmap = (sBmap+1)%4;
+        sBmap = (sBmap+1)%6;
     else
-        sBmap = to % 4;
+        sBmap = to % 6;
     switch (sBmap) {
         case 0:
             std::cout << "Bitmap Mode: Off" << std::endl;
@@ -194,10 +207,16 @@ void changeBitmap(int to) {
             if (finalRendered)
                 bitmapRender.setData(finalImage, width, height, index);
             break;
+        case 4:
+            std::cout << "Bitmap Mode: Image" << std::endl;
+            bitmapRender.setData(backgroundImage);
+            break;
+        case 5:
+            std::cout << "Bitmap Mode: Edges" << std::endl;
+            bitmapRender.setData(backgroundEdges);
+            break;
     }
 }
-
-double extract(double v);
 
 void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_H && action == GLFW_PRESS) {
@@ -227,6 +246,30 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_M && action == GLFW_PRESS) {
         changeBitmap(-1);
     }
+    if (key == GLFW_KEY_E && action == GLFW_PRESS) {
+        if (!edgesRendered) {
+            cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
+            edgesRendered = true;
+        }
+
+        if (sBmap != 5) {
+            // bitmapRender.setData(backgroundEdges);
+            changeBitmap(5);
+
+            handles = false;
+            sBezier = false;
+            sColor = false;
+            sGauss = false;
+        } else if (sBmap == 5) {
+            // bitmapRender.setData(backgroundImage);
+            changeBitmap(4);
+
+            handles = false;
+            sBezier = true;
+            sColor = false;
+            sGauss = false;
+        }
+    }
     if (key == GLFW_KEY_J && action == GLFW_PRESS) {
         solve_gaussian(bezier, gaussianCurve, width, height, blurImage);
         blurRendered = true;
@@ -239,7 +282,6 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 
     if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-        // TODO: Assign a key in the usage printout. J is a placeholder.
         if (!blurRendered || !rgbRendered) {
             std::cout << "Render Color and Blur First!" << std::endl;
         }
@@ -248,35 +290,16 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         finalRendered = true;
         changeBitmap(3);
     }
-    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-        std::cout << "Handles: " << std::endl;
-        for (auto & handle : bezier.handles) {
-            std::cout << handle << std::endl;
-        }
-        std::cout << "P Color: " << std::endl;
-        for (auto &ctrl : colorCurve.pControl) {
-            std::cout << "(" << ctrl.first << ", " << ctrl.second.asInt << ")" << std::endl;
-        }
-        std::cout << "N Color: " << std::endl;
-        for (auto &ctrl : colorCurve.nControl) {
-            std::cout << "(" << ctrl.first << ", " << ctrl.second.asInt << ")" << std::endl;
-        }
-        std::cout << "Blur: " << std::endl;
-        for (auto &ctrl : gaussianCurve.control) {
-            std::cout << "(" << ctrl.first << ", " << ctrl.second << ")" << std::endl;
-        }
-    }
 
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-        cv::Mat image = bitmapRender.getData();
-
-        GaussianStack stack(image);
-        EdgeStack edges(stack, 80, 200);
+        GaussianStack stack(backgroundImage);
+        EdgeStack edges(stack, cannyLowerThreshold, cannyUpperThreshold);
 
         std::vector<PixelChain> chains;
         traceEdgePixels(chains, edges.layer(0), 5);
 
         const int nChains = chains.size();
+        std::cout << nChains << " chains detected" << std::endl;
 
         std::vector<std::vector<Point>> polylines;
         for (int i = 0; i < nChains; i++) {
@@ -288,213 +311,88 @@ void handleEvents(GLFWwindow* window, int key, int scancode, int action, int mod
         }
         bezier.load_polyline(polylines, 3);
 
+        changeBitmap(4);
+
         sBezier = true;
         sColor = false;
         sGauss = false;
     }
 
-    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+    if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+        std::cout << "Sampling..." << std::endl;
         cv::Mat image = bitmapRender.getData();
 
         cv::Mat imageLAB;
         cv::cvtColor(image, imageLAB, cv::COLOR_BGR2Lab);
 
-//        for (int c = 0; c < beziers.size(); c++) {
-//            sampleBezierColours(*beziers.at(c), *colorCurves.at(c), image, imageLAB, 0.1);
-//        }
-        sampleBezierColours(bezier, colorCurve, image, imageLAB, 0.1);
+        sampleBezierColours(bezier, colorCurve, image, imageLAB, samplingDensity);
 
         sBezier = false;
         sColor = true;
         sGauss = false;
     }
-    if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
-        std::cout << "samples=[" << std::endl;
-        for (auto & handle : bezier.samples) {
-            std::cout << "(" <<
-                      (2.0*handle.x/WIDTH-1.0) * 7.5
-                      << ", " <<
-                      -(2.0*handle.y/HEIGHT-1.0) * 4
-                      << ", 0)," << std::endl;
-        }
-        std::cout << "]" << std::endl << std::endl;
-        std::cout << "samples=[" << std::endl;
-        for (auto & handle : bezier.samples) {
-            std::cout << "(" <<
-                      (2.0*handle.x/WIDTH-1.0) * 7.5
-                      << ", " <<
-                      -(2.0*handle.y/HEIGHT-1.0) * 4
-                      << ", 0)," << std::endl;
-        }
-        std::cout << "]" << std::endl;
-        std::cout << "pOffSamples=[" << std::endl;
-        for (auto & handle : bezier.pOffset) {
-            std::cout << "(" <<
-                      (2.0*handle.x/WIDTH-1.0) * 7.5
-                      << ", " <<
-                      -(2.0*handle.y/HEIGHT-1.0) * 4
-                      << ", 0)," << std::endl;
-        }
-        std::cout << "]" << std::endl << std::endl;
-        std::cout << "nOffSamples=[" << std::endl;
-        for (auto & handle : bezier.nOffset) {
-            std::cout << "(" <<
-                      (2.0*handle.x/WIDTH-1.0) * 7.5
-                      << ", " <<
-                      -(2.0*handle.y/HEIGHT-1.0) * 4
-                      << ", 0)," << std::endl;
-        }
-        std::cout << "]" << std::endl;
-        std::cout << "pColors=[" << std::endl;
-        std::vector<double> r, g, b;
-        interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractRed, r);
-        interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractGreen, g);
-        interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractBlue, b);
-        for (int i = 0; i < r.size(); i ++) {
-            ubyte rv = ((ubyte) (r.at(i)*255)) & 0xFF;
-            ubyte gv = ((ubyte) (g.at(i)*255)) & 0xFF;
-            ubyte bv = ((ubyte) (b.at(i)*255)) & 0xFF;
-            int rgb = (rv << 16) | (gv << 8) | bv;
-            std::cout << "\"#" << std::setfill('0') << std::setw(6) << std::hex << rgb << "\", " << std::endl;
-        }
-        std::cout << "]" << std::endl;
-        std::cout << "nColors=[" << std::endl;
-        r.clear();
-        g.clear();
-        b.clear();
-        interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractRed, r);
-        interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractGreen, g);
-        interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractBlue, b);
-        for (int i = 0; i < r.size(); i ++) {
-            ubyte rv = ((ubyte) (r.at(i)*255)) & 0xFF;
-            ubyte gv = ((ubyte) (g.at(i)*255)) & 0xFF;
-            ubyte bv = ((ubyte) (b.at(i)*255)) & 0xFF;
-            int rgb = (rv << 16) | (gv << 8) | bv;
-            std::cout << "\"#" << std::setfill('0') << std::setw(6) << std::hex << rgb << "\", " << std::endl;
-        }
-        std::cout << "]" << std::endl;
-        std::cout << "blurColors=[" << std::endl;
-        b.clear();
-        interpolate_control(bezier.samples, gaussianCurve.curve.controlToIndex(gaussianCurve.control), extract, b);
-        double max = 0;
-        for (int i = 0; i < b.size(); i ++) {
-            max = MAX(max, b.at(i));
-        }
-        for (int i = 0; i < b.size(); i ++) {
-            ubyte bv = ((ubyte) ((b.at(i)/max)*255)) & 0xFF;
-            int rgb = (bv << 16) | (bv << 8) | bv;
-            std::cout << "\"#" << std::setfill('0') << std::setw(6) << std::hex << rgb << "\", " << std::endl;
-        }
-        std::cout << "]" << std::endl;
-        std::cout << "pHandles={" << std::endl;
-        for (auto &handle : colorCurve.pCurve.controlToIndex(colorCurve.pControl)) {
-            Point &p = bezier.pOffset.at(handle.first);
-            std::cout << "(" <<
-                      (2.0*p.x/WIDTH-1.0) * 7.5
-                      << ", " <<
-                      -(2.0*p.y/HEIGHT-1.0) * 4
-                      << "): "
-                      << "\"#" << std::setfill('0') << std::setw(6)
-                      << std::hex << (handle.second.asInt & 0xFFFFFF) << "\", " << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        std::cout << "nHandles={" << std::endl;
-        for (auto &handle : colorCurve.nCurve.controlToIndex(colorCurve.nControl)) {
-            Point &p = bezier.nOffset.at(handle.first);
-            std::cout << "(" <<
-                      (2.0*p.x/WIDTH-1.0) * 7.5
-                      << ", " <<
-                      -(2.0*p.y/HEIGHT-1.0) * 4
-                      << "): "
-                      << "\"#" << std::setfill('0') << std::setw(6)
-                      << std::hex << (handle.second.asInt & 0xFFFFFF) << "\", " << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        std::cout << "bHandles={" << std::endl;
-        for (auto &handle : gaussianCurve.curve.controlToIndex(gaussianCurve.control)) {
-            Point &p = bezier.samples.at(handle.first);
-            ubyte bv = ((ubyte) ((handle.second/max) *255)) & 0xFF;
-            int blur = (bv << 16) | (bv << 8) | bv;
-            std::cout << "(" <<
-                      (2.0*p.x/WIDTH-1.0) * 7.5
-                      << ", " <<
-                      -(2.0*p.y/HEIGHT-1.0) * 4
-                      << "): "
-                      << "\"#" << std::setfill('0') << std::setw(6)
-                      << std::hex << blur << "\", " << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        std::cout << "norms=[" << std::endl;
-        for (auto & norm : bezier.norms) {
-            std::cout << "(" <<
-                      norm.x
-                      << ", " <<
-                      norm.y
-                      << ")," << std::endl;
-        }
-        std::cout << "]" << std::endl;
-        {
-            std::vector<double> pr, pg, pb, nr, ng, nb;
-            interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractRed, pr);
-            interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractGreen, pg);
-            interpolate_control(bezier.pOffset, colorCurve.pCurve.controlToIndex(colorCurve.pControl), extractBlue, pb);
-            interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractRed, nr);
-            interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractGreen, ng);
-            interpolate_control(bezier.nOffset, colorCurve.nCurve.controlToIndex(colorCurve.nControl), extractBlue, nb);
 
-            std::vector<double> rdx, rdy, gdx, gdy, bdx, bdy;
-            for (int i = 0; i < bezier.norms.size(); i++) {
-                Point &norm = bezier.norms.at(i);
-                rdx.emplace_back(norm.x * (pr.at(i) - nr.at(i)));
-                gdx.emplace_back(norm.x * (pg.at(i) - ng.at(i)));
-                bdx.emplace_back(norm.x * (pb.at(i) - nb.at(i)));
-                rdy.emplace_back(norm.y * (pr.at(i) - nr.at(i)));
-                gdy.emplace_back(norm.y * (pg.at(i) - ng.at(i)));
-                bdy.emplace_back(norm.y * (pb.at(i) - nb.at(i)));
-            }
+    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        int leftShiftState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+        int rightShiftState = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
 
-            std::cout << "redNorms=[" << std::endl;
-            for (int i = 0; i < bezier.norms.size(); i++) {
-                std::cout << "(" <<
-                          rdx.at(i)
-                          << ", " <<
-                          -rdy.at(i)
-                          << ")," << std::endl;
-            }
-            std::cout << "]" << std::endl;
-            std::cout << "greenNorms=[" << std::endl;
-            for (int i = 0; i < bezier.norms.size(); i++) {
-                std::cout << "(" <<
-                          gdx.at(i)
-                          << ", " <<
-                          -gdy.at(i)
-                          << ")," << std::endl;
-            }
-            std::cout << "]" << std::endl;
-            std::cout << "blueNorms=[" << std::endl;
-            for (int i = 0; i < bezier.norms.size(); i++) {
-                std::cout << "(" <<
-                          bdx.at(i)
-                          << ", " <<
-                          -bdy.at(i)
-                          << ")," << std::endl;
-            }
-            std::cout << "]" << std::endl;
+        if (leftShiftState || rightShiftState) {
+            // Increase sampling density by a constant until it reaches maximum.
+            samplingDensity = std::min(samplingDensity + 0.05, 1.0);
+            std::cout << "Incresing sampling density to " << samplingDensity << std::endl;
         }
-        if (rgbRendered){
-            changeBitmap(1);
-            cv::Mat img = bitmapRender.getData();
-            cv::imwrite("color.png", img);
+        else {
+            // Decrease Canny threshold by a multiplier until it reaches minimum.
+            samplingDensity = std::max(samplingDensity - 0.05, 0.05);
+            std::cout << "Decresing sampling density to " << samplingDensity << std::endl;
         }
-        if (blurRendered){
-            changeBitmap(2);
-            cv::Mat img = bitmapRender.getData();
-            cv::imwrite("blur.png", img);
+    }
+
+    if (key == GLFW_KEY_U && action == GLFW_PRESS) {
+        int leftShiftState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+        int rightShiftState = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
+
+        if (leftShiftState || rightShiftState) {
+            // Increase Canny threshold by a multiplier until it reaches maximum.
+            cannyUpperThreshold = std::min(cannyUpperThreshold * 1.2, 100000.0);
+            std::cout << "Incresing upper Canny threshold to " << cannyUpperThreshold << std::endl;
+        } else {
+            // Decrease Canny threshold by a multiplier until it reaches minimum.
+            cannyUpperThreshold = std::max(cannyUpperThreshold / 1.2, 2.0);
+            std::cout << "Decreasing upper Canny threshold to " << cannyUpperThreshold << std::endl;
         }
-        if (finalRendered){
-            changeBitmap(3);
-            cv::Mat img = bitmapRender.getData();
-            cv::imwrite("final.png", img);
+
+        cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
+
+        changeBitmap(5);
+
+        handles = false;
+        sBezier = false;
+        sColor = false;
+        sGauss = false;
+    }
+
+    if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+        int leftShiftState = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT);
+        int rightShiftState = glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
+
+        if (leftShiftState || rightShiftState) {
+            // Increase Canny threshold by a multiplier until it reaches maximum.
+            cannyLowerThreshold = std::min(cannyLowerThreshold * 1.1, 100000.0);
+            std::cout << "Increasing lower Canny threshold to " << cannyLowerThreshold << std::endl;
+        } else {
+            // Decrease Canny threshold by a multiplier until it reaches minimum.
+            cannyLowerThreshold = std::max(cannyLowerThreshold / 1.1, 2.0);
+            std::cout << "Decreasing lower Canny threshold to " << cannyLowerThreshold << std::endl;
         }
+
+        cv::Canny(backgroundImage, backgroundEdges, cannyLowerThreshold, cannyUpperThreshold);
+
+        changeBitmap(5);
+
+        handles = false;
+        sBezier = false;
+        sColor = false;
+        sGauss = false;
     }
 }

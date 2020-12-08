@@ -41,7 +41,7 @@ private:
     std::default_random_engine re;
 
     bool shift = false;
-    bool epressed = false;
+    bool xPressed = false;
     bool pressed = false;
     bool rpressed = false;
 

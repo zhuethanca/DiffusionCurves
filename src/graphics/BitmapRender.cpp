@@ -85,11 +85,25 @@ void BitmapRender::setData(cv::Mat &data) {
     this->width = width;
     this->height = height;
 
-    for (int x = 0; x < width; x++) {
-        for (int y = 0; y < height; y++) {
-            this->data[((height - y - 1) * width + x) * 3 + 0] = (ubyte)(data.at<cv::Vec3b>(y, x)(2)) & 0xFF;
-            this->data[((height - y - 1) * width + x) * 3 + 1] = (ubyte)(data.at<cv::Vec3b>(y, x)(1)) & 0xFF;
-            this->data[((height - y - 1) * width + x) * 3 + 2] = (ubyte)(data.at<cv::Vec3b>(y, x)(0)) & 0xFF;
+    if (data.channels() == 3) {
+        // RGB image.
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                this->data[((height - y - 1) * width + x) * 3 + 0] = (ubyte)(data.at<cv::Vec3b>(y, x)(2)) & 0xFF;
+                this->data[((height - y - 1) * width + x) * 3 + 1] = (ubyte)(data.at<cv::Vec3b>(y, x)(1)) & 0xFF;
+                this->data[((height - y - 1) * width + x) * 3 + 2] = (ubyte)(data.at<cv::Vec3b>(y, x)(0)) & 0xFF;
+            }
+        }
+    } else if (data.channels() == 1) {
+        // Grayscale image.
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                const ubyte luminosity = data.at<ubyte>(y, x);
+
+                this->data[((height - y - 1) * width + x) * 3 + 0] = luminosity;
+                this->data[((height - y - 1) * width + x) * 3 + 1] = luminosity;
+                this->data[((height - y - 1) * width + x) * 3 + 2] = luminosity;
+            }
         }
     }
 }
