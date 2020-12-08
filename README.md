@@ -1,20 +1,28 @@
+# Building
+
+This project depends on OpenCv. Please install it before building.
+
+Once built, running without a argument provides a blank canvas. Provide path to image file to allow extraction from images.
+
+dolphin.jpg from https://explore.org/livecams/oceans/wild-dolphins
+
 # Diffusion Curves
 
 Diffusion Curves is a vector-based primitive for encoding complex gradients. Traditionally vector based gradients only support linear and radial gradients which is very limiting with the gradients that can be represented.
 <p align=center>
-<img src="Linear_Gradient.png" alt="drawing" width="250"/>
-<img src="Radial_Gradient.png" alt="drawing" width="250"/>
+<img src="images/Linear_Gradient.png" alt="drawing" width="250"/>
+<img src="images/Radial_Gradient.png" alt="drawing" width="250"/>
 <p align=center>
 (Left) Linear Gradient (Right) Radial Gradient
 
 Diffusion Curves allows the user to define a vector based line, in this case a set of cubic Bezier curves, and construct a gradient diffusing from the curve.
 
 <p align=center>
-<img src="bezier.png" alt="drawing" width="250"/>
-<img src="color.png" alt="drawing" width="250"/>
+<img src="images/bezier.png" alt="drawing" width="250"/>
+<img src="images/color.png" alt="drawing" width="250"/>
 <p align=center>
-<img src="blur-control.png" alt="drawing" width="250"/>
-<img src="blurred-final.png" alt="drawing" width="250"/>
+<img src="images/blur-control.png" alt="drawing" width="250"/>
+<img src="images/blurred-final.png" alt="drawing" width="250"/>
 
 <p align=center>
 (Top Left) Bezier Curve (Top Right) Color Curves
@@ -33,7 +41,7 @@ where $I$ is our final image, and $C$ defined on our color curve storing our col
 Using the equation in this form can produce the diffusion, however we lose the sharp color change between our color curves
 
 <p align=center>
-<img src="no-grad.png" alt="drawing" width="500"/>
+<img src="images/no-grad.png" alt="drawing" width="500"/>
 <p align=center>
 Diffusion Curve Without Gradient
 
@@ -141,7 +149,7 @@ Where $B$ is similarly the rasterized blur curve. Since the blur curve lies dire
 Thus solving this equation the same way as described above, but instead having $B$ being a zero vector, yeilds the diffused blur map
 
 <p align=center>
-<img src="blur-map.png" alt="drawing" width="500"/>
+<img src="images/blur-map.png" alt="drawing" width="500"/>
 <p align=center>
 Blur Map
 
@@ -150,7 +158,7 @@ Blur Map
 We can now apply the final blur using the blur map as the pixel wise kernel size using a gaussian blur to yeild our final blurred image.
 
 <p align=center>
-<img src="blurred-final.png" alt="drawing" width="500"/>
+<img src="images/blurred-final.png" alt="drawing" width="500"/>
 <p align=center>
 Final Image
 

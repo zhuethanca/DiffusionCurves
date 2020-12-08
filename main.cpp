@@ -100,22 +100,26 @@ int main(int argc, char** argv) {
     glViewport(0, 0, screenWidth, screenHeight);
 
     std::cout<<R"(
-    H,h      Show/Hide Handles
-    B,b      Show/Hide Bezier Curve
-    C,c      Show/Hide Color Curves
-    G,g      Show/Hide Gaussian Blur Curves
-    E,e      View Background Edges
-    M,m      Change Bitmap Mode
-    J,j      Render Gaussian Blur Map
-    X,x      Enter Color/Sigma
-    R,r      Render Sharp Color Image
-    W,w      Apply Blur Map To Color Image
+    Left Click    Add/Select Control Point
+    Right Click   Remove Control Point
+    Shift Click   Start new Bezier Curve/Insert Random Control Point
 
-    A,a      Auto-generate Curves from Image
-    S,s      Sample Colours from Image
-    D,d      Raise/Lower Colour Sampling Density
-    U,u      Raise/Lower Upper Canny Threshold
-    L,l      Raise/Lower Lower Canny Threshold
+    H,h           Show/Hide Handles
+    B,b           Show/Hide Bezier Curve
+    C,c           Show/Hide Color Curves
+    G,g           Show/Hide Gaussian Blur Curves
+    E,e           View Background Edges
+    M,m           Change Bitmap Mode
+    J,j           Render Gaussian Blur Map
+    X,x           Enter Color/Sigma
+    R,r           Render Sharp Color Image
+    W,w           Apply Blur Map To Color Image
+
+    A,a           Auto-generate Curves from Image
+    S,s           Sample Colours from Image
+    D,d           Raise/Lower Colour Sampling Density
+    U,u           Raise/Lower Upper Canny Threshold
+    L,l           Raise/Lower Lower Canny Threshold
 )";
 
     while (!glfwWindowShouldClose(window)) {
