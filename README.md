@@ -69,7 +69,7 @@ forming a Poisson equation.
 To solve this, we first flatten the 2d rasterized color curve image into a 1d array by some form of encoding. Also we can seperate each color channel into a different column. Thus we can write our color curve as a matrix
 
 <p align=center>
-<img src="tex/cin.png"/>
+<img src="tex/Cin.png"/>
 
 
 >
@@ -98,10 +98,10 @@ To solve this, we first flatten the 2d rasterized color curve image into a 1d ar
 > 
 >Norms are plotted on the original line, and can be computed on each end point using the norm and color difference as described above, then linearly interpolated across the line segment.
 
-Similarly we can construct the <img src="tex/wxin.png"/> and <img src="tex/wyin.png"/> matricies encoding the <img src="tex/x.png"/> and <img src="tex/y.png"/> components of our color gradient. Stacking these two matricies together yields
+Similarly we can construct the <img src="tex/Wxin.png"/> and <img src="tex/wyin.png"/> matricies encoding the <img src="tex/x.png"/> and <img src="tex/y.png"/> components of our color gradient. Stacking these two matricies together yields
 
 <p align=center>
-<img src="tex/weq.png"/>
+<img src="tex/Weq.png"/>
 
 We can solve the Poisson equation by reformulating it as a quadratic minimization problem of the form, as described [here](https://github.com/alecjacobson/geometry-processing-mesh-reconstruction#btw-whats-poisson-got-to-do-with-it), section *BTW, what's Poisson got to do with it?*.
 
