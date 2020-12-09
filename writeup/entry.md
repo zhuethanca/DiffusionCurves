@@ -102,10 +102,10 @@ It is common for an artist to use a photographic reference as a starting point f
 Diffusion curves offer an effective representation of graphics, and are flexible enough to be stylized in different ways. A diffusion curve is a Bezier curve with offset colour information: artists can draw a curve and have good colour information automatically generated from the underlying image. To colour a diffusion curve, random samples are taken along the Bezier spline. The number of samples is controlled by a sample density parameter that a user can adjust on the fly. At each sample point, traversing the normal vector in both directions will find a colour constraint for the left and right side of the curve.
 
 <p align=center>
+<img src="Dog Colour Samples.png" alt="drawing" width="250"/>
 <img src="Dolphin Sparse Colour Sample.png" alt="drawing" width="250"/>
-<img src="Dolphin Dense Colour Sample.png" alt="drawing" width="250"/>
 <p align=center>
-(Left) Sparse Colour Sampling (Right) Dense Colour Sampling
+(Left) Sampling on manual curves (Right) Sampling on automatically reconstructed curves
 
 Images can be noisy, and poor placement of edges or normal vectors can result in bad colour samples. To avoid this, colour samples are rejected if the sample pixel is further than one standard deviation from the average of its neighbours. This comparison is made on each channel of an image in LAB space. Doing this improves the quality of colour samples on the diffusion curves.
 
@@ -118,9 +118,9 @@ Through analysis of edges, the locations of Bezier curves can be reconstructed f
 <img src="Dolphin Curves Only.png" alt="drawing" width="250"/>
 <img src="Dolphin Render Dense.png" alt="drawing" width="250"/>
 <p align=center>
-(Left) Original Image (Center) Diffusion Curve Representation (Right) Rendered Diffusion Curves
+(Left) Original image (Center) Diffusion curve representation (Right) Rendered diffusion curves
 
-Like diffusion curves, edges are precisely lines which are different colours on different sides. This means that diffusion curves occur exclusively at edges in an image. Edge detection is a much-studied problem, and this project uses the Canny edge detection algorithm. The output of Canny edge detection is a black-and-white image, which has white pixels at edges and black pixels elsewhere. It can be considered as a matrix, where white colour (or 1) denotes an edge at that location and black (or 0) denotes no edge. The algorithm's sensitivity is controlled by two parameters.
+Like diffusion curves, edges are precisely lines which are different colours on different sides. This means that diffusion curves occur exclusively at edges in an image. Edge detection is a much-studied problem, and this project uses the Canny edge detection algorithm. The output of Canny edge detection is a black-and-white image, which has white pixels at edges and black pixels elsewhere. It can be considered as a matrix, where white colour (or 1) denotes an edge at that location and black (or 0) denotes no edge. The sensitivity of Canny edge detection is controlled by two parameters which can be input into our program and changed interactively.
 
 <p align=center>
 <img src="Dolphin Edges Sparse.png" alt="drawing" width="250"/>
@@ -140,7 +140,7 @@ Finally, the polylines are converted into Bezier curves. Each point on the polyl
 <img src="Dolphin Bezier Sparse.png" alt="drawing" width="250"/>
 <img src="Dolphin Bezier Dense.png" alt="drawing" width="250"/>
 <p align=center>
-(Left) Sparse Colour Sampling (Right) Dense Colour Sampling
+(Left) Sparse reconstructed Bezier curves (Right) Dense reconstructed Bezier curves
 
 The result is a series of Bezier curves along the edges of the image. The number of edges can be controlled by the Canny edge detector's upper and lower thresholds: users can manipulate these and experiment with different edge detection settings. Colour sampling can be run to assign colours from the underlying image to curves that follow its edges: the result is a pure diffusion curve representation of the image.
 
@@ -159,7 +159,7 @@ The paper discusses using snakes (active contours) to snap Bezier curves to the 
 
 ## Running the Program
 
-Our program comes as an executable files. Running this file without arguments will display an empty gray screen.
+Our program comes as an executable files. Running this file without arguments will display an empty gray screen. A guide to keyboard inputs will be printed to the terminal.
 
 ```
 ./opengl.exe
