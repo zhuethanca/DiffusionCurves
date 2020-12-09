@@ -171,8 +171,8 @@ It is common for an artist to use a photographic reference as a starting point f
 Diffusion curves offer an effective representation of graphics, and are flexible enough to be stylized in different ways. A diffusion curve is a Bezier curve with offset colour information: artists can draw a curve and have good colour information automatically generated from the underlying image. To colour a diffusion curve, random samples are taken along the Bezier spline. The number of samples is controlled by a sample density parameter that a user can adjust on the fly. At each sample point, traversing the normal vector in both directions will find a colour constraint for the left and right side of the curve.
 
 <p align=center>
-<img src="Dog Colour Samples.png" alt="drawing" height="200"/>
-<img src="Dolphin Sparse Colour Sample Zoomed.png" alt="drawing" height="200"/>
+<img src="images/Dog Colour Samples.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Sparse Colour Sample Zoomed.png" alt="drawing" height="200"/>
 <p align=center>
 (Left) Sampling on manual curves (Right) Sampling on automatically reconstructed curves
 
@@ -183,10 +183,10 @@ Images can be noisy, and poor placement of edges or normal vectors can result in
 Through analysis of edges, the locations of Bezier curves can be reconstructed from an image as well as their colour constraints. The result is simply a series of diffusion curves, so an artist can continue to edit and stylize their work from that starting point. The number of diffusion curves generated can be controlled by various parameters.
 
 <p align=center>
-<img src="Dolphin Original.png" alt="drawing" height="200"/>
-<img src="Dolphin Curves Only.png" alt="drawing" height="200"/>
-<img src="Dolphin Render Dense.png" alt="drawing" height="200"/>
-<img src="Dolphin Render Sparse.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Original.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Curves Only.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Render Dense.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Render Sparse.png" alt="drawing" height="200"/>
 <p align=center>
 (Top-Left) Original image (Top-Right) Diffusion curve representation
 <p align=center>
@@ -195,8 +195,8 @@ Through analysis of edges, the locations of Bezier curves can be reconstructed f
 Like diffusion curves, edges are precisely lines which are different colours on different sides. This means that diffusion curves occur exclusively at edges in an image. Edge detection is a much-studied problem, and this project uses the Canny edge detection algorithm. The output of Canny edge detection is a black-and-white image, which has white pixels at edges and black pixels elsewhere. It can be considered as a matrix, where white colour (or 1) denotes an edge at that location and black (or 0) denotes no edge. The sensitivity of Canny edge detection is controlled by two parameters which can be input into our program and changed interactively.
 
 <p align=center>
-<img src="Dolphin Edges Sparse.png" alt="drawing" height="200"/>
-<img src="Dolphin Edges Dense.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Edges Sparse.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Edges Dense.png" alt="drawing" height="200"/>
 <p align=center>
 Edges for dolphin image with (Left) low sensitivity and (Right) high sensitivity.
    
@@ -209,8 +209,8 @@ The graph of pairwise penalties can be explored to find a shortest polyline from
 Finally, the polylines are converted into Bezier curves. Each point on the polyline becomes a handle, and the slope of the polyline is used to define curve controls on the Bezier curve.
 
 <p align=center>
-<img src="Dolphin Bezier Sparse.png" alt="drawing" height="200"/>
-<img src="Dolphin Bezier Dense.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Bezier Sparse.png" alt="drawing" height="200"/>
+<img src="images/Dolphin Bezier Dense.png" alt="drawing" height="200"/>
 <p align=center>
 (Left) Sparse reconstructed Bezier curves (Right) Dense reconstructed Bezier curves
 
